@@ -6,7 +6,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -55,6 +57,11 @@ fun ColorScheme.withReader(p: ReaderPalette): ColorScheme {
  * Wraps the reader in its own colours when a reader theme is picked. The status bar icons turn dark on a
  * light page and light on a dark one.
  */
+/** The status bar icon colour a reader theme asks for: dark icons on a light page. Null means the app decides. */
+object BarIcons {
+    var light by androidx.compose.runtime.mutableStateOf<Boolean?>(null)
+}
+
 @Composable
 fun ReaderTheme(id: String, content: @Composable () -> Unit) {
     // The same layout every time, with or without a palette. A different shape would reset the screen,
@@ -62,21 +69,9 @@ fun ReaderTheme(id: String, content: @Composable () -> Unit) {
     val p = readerPalette(id)
     val base = MaterialTheme.colorScheme
     val scheme = remember(base, p) { if (p == null) base else base.withReader(p) }
-    val view = LocalView.current
     DisposableEffect(p) {
-        if (p == null) return@DisposableEffect onDispose { }
-        val window = (view.context as? android.app.Activity)?.window
-            ?: generateSequence(view.context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()?.window
-        val c = window?.let { androidx.core.view.WindowInsetsControllerCompat(it, it.decorView) }
-        val before = c?.isAppearanceLightStatusBars
-        val beforeNav = c?.isAppearanceLightNavigationBars
-        val light = p.page.luminance() > 0.5f
-        c?.isAppearanceLightStatusBars = light
-        c?.isAppearanceLightNavigationBars = light
-        onDispose {
-            if (before != null) c.isAppearanceLightStatusBars = before
-            if (beforeNav != null) c.isAppearanceLightNavigationBars = beforeNav
-        }
+        BarIcons.light = p?.let { it.page.luminance() > 0.5f }
+        onDispose { BarIcons.light = null }
     }
     MaterialTheme(colorScheme = scheme, typography = MaterialTheme.typography, shapes = MaterialTheme.shapes) {
         Surface(Modifier.fillMaxSize(), color = scheme.background) { content() }

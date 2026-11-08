@@ -73,7 +73,7 @@ import kotlinx.coroutines.withContext
 /** The line under an article's title: who wrote it, where, when, and how long it takes. */
 fun bylineOf(m: ArticleMeta): String = listOfNotNull(
     m.author.takeIf { it.isNotBlank() },
-    m.siteName.takeIf { it.isNotBlank() },
+    m.siteName.takeIf { it.isNotBlank() && !it.equals(m.author.trim(), ignoreCase = true) },
     Template.formatDate(m.published, "D MMM YYYY"),
     "${m.minutes} min read",
 ).joinToString("  ·  ")

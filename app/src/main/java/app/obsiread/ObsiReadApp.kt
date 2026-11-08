@@ -18,7 +18,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ObsiReadApp : Application() {
+class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory {
+    /**
+     * Pictures are downloaded with the app's own name. Some sites, such as Wikipedia, refuse a download
+     * that does not say who is asking.
+     */
+    override fun newImageLoader(context: coil3.PlatformContext): coil3.ImageLoader {
+        val client = okhttp3.OkHttpClient.Builder().addInterceptor { chain ->
+            chain.proceed(chain.request().newBuilder().header("User-Agent", "ObsiRead/" + BuildConfig.VERSION_NAME + " (https://github.com/Virus7976/obsiread)").build())
+        }.build()
+        return coil3.ImageLoader.Builder(context)
+            .components { add(coil3.network.okhttp.OkHttpNetworkFetcherFactory(callFactory = { client })) }
+            .build()
+    }
+
     lateinit var settings: SettingsStore
         private set
     lateinit var library: Library

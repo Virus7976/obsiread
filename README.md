@@ -1,8 +1,8 @@
 <p align="center">
-  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Virus7976/obsiread?style=for-the-badge&label=release&color=e8673c&labelColor=17151f"></a>
-  <img alt="Android 8 or newer" src="https://img.shields.io/badge/Android-8%2B-e8673c?style=for-the-badge&labelColor=17151f">
-  <img alt="Kotlin and Jetpack Compose" src="https://img.shields.io/badge/Kotlin-Compose-e8673c?style=for-the-badge&labelColor=17151f">
-  <a href="LICENSE"><img alt="Licence GPL-3.0" src="https://img.shields.io/badge/licence-GPL--3.0-e8673c?style=for-the-badge&labelColor=17151f"></a>
+  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Virus7976/obsiread?style=for-the-badge&label=release&color=9050FF&labelColor=000000"></a>
+  <img alt="Android 8 or newer" src="https://img.shields.io/badge/Android-8%2B-9050FF?style=for-the-badge&labelColor=000000">
+  <img alt="Kotlin and Jetpack Compose" src="https://img.shields.io/badge/Kotlin-Compose-9050FF?style=for-the-badge&labelColor=000000">
+  <a href="LICENSE"><img alt="Licence GPL-3.0" src="https://img.shields.io/badge/licence-GPL--3.0-9050FF?style=for-the-badge&labelColor=000000"></a>
 </p>
 
 <h1 align="center">ObsiRead</h1>
@@ -16,7 +16,30 @@
   <a href="../../releases/latest"><b>Download the latest APK</b></a>
 </p>
 
+<p align="center"><img src="docs/images/hero.png" alt="ObsiRead: a highlight with a note, a clean article, and the Save to Obsidian sheet"></p>
+
 ---
+
+## A closer look
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/read.png" alt="Only the article"></td>
+    <td width="50%"><img src="docs/images/focus.png" alt="The bars hide while you read"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/highlight.png" alt="Highlight anything and add a note"></td>
+    <td width="50%"><img src="docs/images/clip.png" alt="Save straight into Obsidian"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/contents.png" alt="Jump to any heading"></td>
+    <td width="50%"><img src="docs/images/themes.png" alt="Ten reader themes"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/comments.png" alt="Comment threads, easy to follow"></td>
+    <td width="50%"><img src="docs/images/links.png" alt="Links open in a card"></td>
+  </tr>
+</table>
 
 ## How it works
 
@@ -35,6 +58,8 @@
 | **Real pages** | The page loads in the phone's own browser engine, so pages that build themselves with scripts read the way you see them. |
 | **Pictures in place** | The article's own pictures show where they belong. Nothing extra is added. |
 | **Contents** | Tap the time left at the bottom to see every heading. The one you are on is marked. Tap one to jump there. |
+| **Comments in full** | Forums and comment threads load every reply. Each reply sits under the one it answers. |
+| **Your way to read** | Ten themes, five fonts, and controls for size, weight, spacing and margins. Tap the page to hide or show the bars. |
 | **Links stay in the app** | A link opens in a reading card over the article. Tap Save to keep it. |
 | **Sign-in pages** | A page that wants you to sign in opens in the app's browser. Sign in, then tap Read this page. Your sign-in stays. |
 | **Pick up where you left off** | Each article opens where you stopped. |
@@ -51,7 +76,6 @@
 | **Review** | Old highlights come back in short rounds. |
 
 ### Coming next
-
 
 - Read aloud with good voices: the phone's, cloud voices, and offline voices.
 - RSS feeds.

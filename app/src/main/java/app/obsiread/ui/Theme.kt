@@ -289,13 +289,15 @@ fun MarginaliaTheme(settings: AppSettings, content: @Composable () -> Unit) {
     }
     // The clock and the phone's buttons follow the app's theme, not the phone's. Otherwise they are white on a light page.
     val view = androidx.compose.ui.platform.LocalView.current
+    // A reader theme sets its own icon colour. It wins while the reader is open.
+    val lightIcons = BarIcons.light ?: (mode == "light")
     if (!view.isInEditMode) androidx.compose.runtime.SideEffect {
         var c = view.context
         while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
         (c as? android.app.Activity)?.window?.let { w ->
             val bars = androidx.core.view.WindowInsetsControllerCompat(w, view)
-            bars.isAppearanceLightStatusBars = mode == "light"
-            bars.isAppearanceLightNavigationBars = mode == "light"
+            bars.isAppearanceLightStatusBars = lightIcons
+            bars.isAppearanceLightNavigationBars = lightIcons
         }
     }
     val palette = paletteOf(settings.themePreset, settings.customPalettes)
