@@ -5,6 +5,8 @@
   <a href="LICENSE"><img alt="Licence GPL-3.0" src="https://img.shields.io/badge/licence-GPL--3.0-9050FF?style=for-the-badge&labelColor=000000"></a>
 </p>
 
+<p align="center"><img src="docs/images/icon.png" width="128" alt="ObsiRead icon"></p>
+
 <h1 align="center">ObsiRead</h1>
 
 <p align="center">
