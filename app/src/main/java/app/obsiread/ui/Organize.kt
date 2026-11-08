@@ -1,0 +1,699 @@
+package app.obsiread.ui
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import app.obsiread.data.WATCH_LATER
+import app.obsiread.data.ArticleMeta
+import androidx.compose.material.icons.rounded.WatchLater
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import app.obsiread.data.AppSettings
+import app.obsiread.data.Playlist
+import app.obsiread.data.Article
+import app.obsiread.obsidian.Sender
+import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
+
+val LibrarySorts = listOf(
+    "recent" to "Recent",
+    "added" to "Date added",
+    "title" to "Title",
+    "author" to "Channel",
+    "highlights" to "Most highlights",
+)
+
+fun List<Article>.sortedBy(sort: String, reversed: Boolean = false): List<Article> = when (sort) {
+    "title" -> sortedBy { it.meta.title.lowercase() }
+    "author" -> sortedWith(compareBy({ it.meta.author.lowercase() }, { it.meta.title.lowercase() }))
+    "highlights" -> sortedByDescending { it.highlights.size }
+    "added" -> sortedByDescending { it.addedAt }
+    else -> this
+}.let { if (reversed) it.reversed() else it }
+
+val LibraryFilterSaver = androidx.compose.runtime.saveable.listSaver<LibraryFilter, String?>(
+    { listOf(it.category, it.tag) }, { LibraryFilter(it[0], it[1]) },
+)
+
+/** A filter picked in the library: a category or a tag. */
+data class LibraryFilter(val category: String? = null, val tag: String? = null) {
+    fun matches(v: Article) = (category == null || v.category.equals(category, true)) && (tag == null || v.tags.any { it.equals(tag, true) })
+    val active get() = category != null || tag != null
+}
+
+/** Sort button and the category and tag chips above the library. */
+@Composable
+fun LibraryControls(
+    videos: List<Article>,
+    sort: String,
+    reversed: Boolean,
+    onSort: (String) -> Unit,
+    filter: LibraryFilter,
+    onFilter: (LibraryFilter) -> Unit,
+    hideDone: Boolean,
+    onHideDone: (Boolean) -> Unit,
+) {
+    val categories = videos.map { it.category }.filter { it.isNotBlank() }.groupingBy { it.lowercase() }.eachCount()
+    val names = videos.map { it.category }.filter { it.isNotBlank() }.distinctBy { it.lowercase() }.sortedByDescending { categories[it.lowercase()] ?: 0 }
+    val tags = videos.flatMap { it.tags }.groupingBy { it.lowercase() }.eachCount().entries.sortedByDescending { it.value }.map { it.key }
+    var menu by remember { mutableStateOf(false) }
+    LazyRow(
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item("sort") {
+            androidx.compose.foundation.layout.Box {
+                FilterChip(
+                    selected = false, onClick = { menu = true },
+                    label = { Text("Sort: " + (LibrarySorts.firstOrNull { it.first == sort }?.second ?: "Recent") + if (reversed) ", reversed" else "") },
+                )
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    LibrarySorts.forEach { (id, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) }, onClick = { onSort(id); menu = false },
+                            trailingIcon = { if (id == sort) Icon(if (reversed) Icons.Rounded.ArrowUpward else Icons.Rounded.ArrowDownward, "Tap to reverse", Modifier.size(18.dp)) },
+                        )
+                    }
+                }
+            }
+        }
+        // Only worth a chip once something is done.
+        if (videos.any { it.done }) item("done") {
+            FilterChip(selected = hideDone, onClick = { onHideDone(!hideDone) }, label = { Text("Hide done") })
+        }
+        if (filter.active) item("clear") {
+            FilterChip(selected = true, onClick = { onFilter(LibraryFilter()) }, label = { Text("Clear filter") },
+                trailingIcon = { Icon(Icons.Rounded.Close, null, Modifier.size(16.dp)) })
+        }
+        items(names, key = { "cat" + it.lowercase() }) { c ->
+            FilterChip(
+                selected = filter.category.equals(c, true),
+                onClick = { onFilter(filter.copy(category = if (filter.category.equals(c, true)) null else c)) },
+                label = { Text(c) },
+            )
+        }
+        items(tags, key = { "tag$it" }) { t ->
+            FilterChip(
+                selected = filter.tag.equals(t, true),
+                onClick = { onFilter(filter.copy(tag = if (filter.tag.equals(t, true)) null else t)) },
+                label = { Text("#$t") },
+            )
+        }
+    }
+}
+
+/** Everything you can do to one video, in one sheet. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+/**
+ * [pending] is a video that is not in the library yet, for example one from the feed. The sheet can
+ * show it and act on it. It joins the library only when you choose something that needs it.
+ */
+fun VideoActionsSheet(videoId: String, inPlaylist: Boolean = false, pending: ArticleMeta? = null, onDismiss: () -> Unit) {
+    val app = LocalApp.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val videos by app.library.articles.collectAsState()
+    val playlists by app.playlists.all.collectAsState()
+    val queue by app.queue.ids.collectAsState()
+    val scheme = MaterialTheme.colorScheme
+    val inLib = videos.any { it.meta.id == videoId }
+    val v = videos.firstOrNull { it.meta.id == videoId }
+        ?: pending?.takeIf { it.id == videoId }?.let { Article(meta = it) }
+    if (v == null) { onDismiss(); return }
+    val scope = rememberCoroutineScope()
+    // Looking costs nothing. A choice that needs the video in the library puts it there first.
+    fun act(block: () -> Unit) { if (inLib) block() }
+    var confirmRemove by remember { mutableStateOf(false) }
+    var newPlaylist by remember { mutableStateOf(false) }
+
+    val sheet = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    SmoothSheet(onDismissRequest = onDismiss, sheetState = sheet) {
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // header: what this video is
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    v.meta.thumb, null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.width(104.dp).aspectRatio(16 / 9f).clip(RoundedCornerShape(16.dp)),
+                )
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    Text(v.meta.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(v.meta.author, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+
+            // quick actions
+            val inQueue = videoId in queue
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActionTile(Icons.Rounded.PlayArrow, "Read next", false, Modifier.weight(1f)) { act { app.queue.playNext(videoId); onDismiss() } }
+                ActionTile(Icons.Rounded.QueueMusic, if (inQueue) "In queue" else "Queue", inQueue, Modifier.weight(1f)) {
+                    act { if (inQueue) app.queue.remove(videoId) else app.queue.add(videoId) }
+                }
+                val later = playlists.firstOrNull { it.id == WATCH_LATER }?.videoIds?.contains(videoId) == true
+                ActionTile(if (later) Icons.Rounded.CheckCircle else Icons.Rounded.WatchLater, if (later) "On the list" else "Read later", later, Modifier.weight(1f)) {
+                    act {
+                        if (later) app.playlists.removeVideo(WATCH_LATER, videoId)
+                        else {
+                            app.playlists.watchLater()
+                            app.playlists.addVideo(WATCH_LATER, videoId)
+                            android.widget.Toast.makeText(ctx, "Added to Read later.", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+
+            // Most used first: put it on a playlist. Everything below opens with a swipe up.
+            if (inLib) GroupCard {
+                FieldBlock("Add to a playlist") {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        playlists.forEach { p ->
+                            val inIt = videoId in p.videoIds
+                            FilterChip(
+                                selected = inIt,
+                                onClick = { if (inIt) app.playlists.removeVideo(p.id, videoId) else app.playlists.addVideo(p.id, videoId) },
+                                label = { Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            )
+                        }
+                        androidx.compose.material3.AssistChip(
+                            onClick = { newPlaylist = true },
+                            label = { Text("New playlist") },
+                            leadingIcon = { Icon(Icons.Rounded.Add, null, Modifier.size(18.dp)) },
+                        )
+                    }
+                }
+            }
+
+            val nav = LocalNav.current
+            GroupCard {
+                ListRow(Icons.Rounded.CheckCircle, if (v.done) "Mark as not done" else "Mark as done", if (v.done) scheme.primary else scheme.onSurface) {
+                    act { app.setDone(videoId, !v.done); onDismiss() }
+                }
+                // A row you can only fail with is not offered. It shows up once there is a note to open.
+                if (videoNote(app, v) != null) {
+                    RowDivider()
+                    ListRow(Icons.Rounded.Description, "Open note") { if (openVideoNote(ctx, app, v)) onDismiss() }
+                }
+                RowDivider()
+                ListRow(Icons.Rounded.OpenInNew, "Open the web page") {
+                    runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(v.meta.url))) }
+                    onDismiss()
+                }
+            }
+
+            if (inLib) GroupCard {
+                val everyCategory = remember(videos) { videos.map { it.category }.filter { it.isNotBlank() }.distinctBy { it.lowercase() } }
+                var cat by remember(videoId) { mutableStateOf(v.category) }
+                FieldBlock("Category") {
+                    PillField(cat, { cat = it; app.library.edit(videoId) { x -> x.copy(category = it.trim()) } }, "For example: Learning")
+                    val catSuggestions = suggestFor(everyCategory, cat)
+                    if (catSuggestions.isNotEmpty()) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(catSuggestions, key = { "sc$it" }) { c ->
+                                FilterChip(selected = false, onClick = { cat = c; app.library.edit(videoId) { x -> x.copy(category = c) } }, label = { Text(c) })
+                            }
+                        }
+                    }
+                }
+                RowDivider(16.dp)
+
+                var newTag by remember(videoId) { mutableStateOf("") }
+                fun addTag(raw: String) {
+                    val t = raw.trim().removePrefix("#").replace(' ', '-')
+                    if (t.isNotEmpty()) app.library.edit(videoId) { x -> x.copy(tags = (x.tags + t).distinctBy { it.lowercase() }) }
+                    newTag = ""
+                }
+                FieldBlock("Tags") {
+                    if (v.tags.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        v.tags.forEach { t ->
+                            InputChip(
+                                selected = true, onClick = { app.library.edit(videoId) { x -> x.copy(tags = x.tags - t) } },
+                                label = { Text("#$t") }, trailingIcon = { Icon(Icons.Rounded.Close, "Remove $t", Modifier.size(16.dp)) },
+                            )
+                        }
+                    }
+                    PillField(
+                        newTag, { newTag = it }, "Add a tag", onDone = { addTag(newTag) },
+                        trailing = { if (newTag.isNotBlank()) IconButton(onClick = { addTag(newTag) }) { Icon(Icons.Rounded.Add, "Add tag") } },
+                    )
+                    val everyTag = remember(videos) { videos.flatMap { it.tags }.distinctBy { it.lowercase() } }
+                    val tagSuggestions = suggestFor(everyTag.filter { t -> v.tags.none { it.equals(t, true) } }, newTag.removePrefix("#"))
+                    if (tagSuggestions.isNotEmpty()) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(tagSuggestions, key = { "st$it" }) { t ->
+                                FilterChip(selected = false, onClick = { addTag(t) }, label = { Text("#$t") })
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (inLib) GroupCard {
+                ListRow(Icons.Rounded.PushPin, if (v.pinned) "Unpin" else "Pin to the top") { app.library.edit(videoId) { it.copy(pinned = !it.pinned) } }
+                if (inPlaylist) {
+                    RowDivider()
+                    ListRow(Icons.Rounded.Add, "Move to library") { app.library.edit(videoId) { it.copy(playlistId = "") }; onDismiss() }
+                }
+                RowDivider()
+                ListRow(Icons.Rounded.Delete, "Remove from ObsiRead", scheme.error) { confirmRemove = true }
+            }
+        }
+    }
+
+    if (newPlaylist) NewPlaylistDialog(
+        onDismiss = { newPlaylist = false },
+        onCreate = { name ->
+            val p = app.playlists.create(name)
+            app.playlists.addVideo(p.id, videoId)
+            newPlaylist = false
+        },
+    )
+
+    if (confirmRemove) RemoveVideoDialog(onKeep = { confirmRemove = false }, onRemove = { confirmRemove = false; app.removeVideo(videoId); onDismiss() })
+}
+
+/** One question, asked the same way wherever a video can be removed. */
+@Composable
+fun RemoveVideoDialog(onKeep: () -> Unit, onRemove: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onKeep,
+        title = { Text("Remove this video?") },
+        text = { Text("Its highlights and saved audio are removed from this phone. Your Obsidian note stays.") },
+        confirmButton = { TextButton(onClick = onRemove) { Text("Remove") } },
+        dismissButton = { TextButton(onClick = onKeep) { Text("Keep") } },
+    )
+}
+
+/** A rounded panel that holds a set of related rows. */
+@Composable
+private fun GroupCard(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    androidx.compose.material3.Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(content = content)
+    }
+}
+
+/** One tappable line in a [GroupCard]: icon, label. */
+@Composable
+private fun ListRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, Modifier.size(20.dp), tint = tint)
+        Spacer(Modifier.width(14.dp))
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun RowDivider(start: androidx.compose.ui.unit.Dp = 50.dp) {
+    androidx.compose.material3.HorizontalDivider(Modifier.padding(start = start), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+}
+
+/** A titled block inside a [GroupCard]. */
+@Composable
+private fun FieldBlock(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        content()
+    }
+}
+
+/** A slim one-line text field. The outlined field is 56dp tall, which is too big inside a panel. */
+@Composable
+internal fun PillField(
+    value: String,
+    onChange: (String) -> Unit,
+    placeholder: String,
+    onDone: (() -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val scheme = MaterialTheme.colorScheme
+    androidx.compose.foundation.text.BasicTextField(
+        value = value, onValueChange = onChange, singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = scheme.onSurface),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(scheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
+        modifier = Modifier.fillMaxWidth(),
+        decorationBox = { inner ->
+            Row(
+                Modifier.fillMaxWidth().height(44.dp).background(scheme.surfaceContainerHighest, RoundedCornerShape(14.dp)).padding(start = 14.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.weight(1f)) {
+                    if (value.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = scheme.outline)
+                    inner()
+                }
+                trailing?.invoke()
+            }
+        },
+    )
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+}
+
+/** One big, rounded button with an icon over a short label. Filled when it is switched on. */
+@Composable
+private fun ActionTile(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    active: Boolean,
+    modifier: Modifier = Modifier,
+    busy: Float? = null,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    androidx.compose.material3.Surface(
+        onClick = {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.ContextClick)
+            onClick()
+        },
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        color = if (active) scheme.primaryContainer else scheme.surfaceContainerHigh,
+    ) {
+        Column(Modifier.padding(vertical = 14.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val tint = if (active) scheme.onPrimaryContainer else scheme.onSurface
+            if (busy != null) {
+                if (busy >= 0f) androidx.compose.material3.CircularProgressIndicator(progress = { busy }, modifier = Modifier.size(24.dp), strokeWidth = 3.dp)
+                else androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 3.dp)
+            } else Icon(icon, null, Modifier.size(24.dp), tint = tint)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 1)
+        }
+    }
+}
+
+/** The three-dot button that opens the sheet. */
+@Composable
+fun MoreButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) { Icon(Icons.Rounded.MoreVert, "More", tint = MaterialTheme.colorScheme.outline) }
+}
+
+// ---------- playlists tab ----------
+
+fun LazyListScope.playlistsTab(
+    playlists: List<Playlist>,
+    videos: List<Article>,
+    openId: String?,
+    onOpenPlaylist: (String?) -> Unit,
+    onOpenVideo: (String) -> Unit,
+    onMore: (String) -> Unit,
+) {
+    val open = playlists.firstOrNull { it.id == openId }
+    if (open == null) {
+        if (playlists.isEmpty()) {
+            item("pl-empty") {
+                Text(
+                    "No playlists yet. Tap New playlist, or tap Add and paste a YouTube playlist link.",
+                    Modifier.padding(24.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        items(playlists, key = { "pl" + it.id }) { p -> PlaylistRow(p, videos) { onOpenPlaylist(p.id) } }
+        return
+    }
+    item("pl-head") { PlaylistHeader(open, onBack = { onOpenPlaylist(null) }) }
+    val inList = open.videoIds.mapNotNull { id -> videos.firstOrNull { it.meta.id == id } }
+    items(inList, key = { "plv" + it.meta.id }) { v -> QueueRow(v, onClick = { onOpenVideo(v.meta.id) }, onLongClick = { onMore(v.meta.id) }, trailing = { MoreButton { onMore(v.meta.id) } }) }
+}
+
+@Composable
+private fun PlaylistRow(p: Playlist, videos: List<Article>, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PlaylistThumb(p, videos, Modifier.width(116.dp))
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text(p.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+            Text(videoCount(p.videoIds.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** The first video's picture, even when that video is not in the library. An empty playlist gets a plain tile. */
+@Composable
+fun PlaylistThumb(p: Playlist, videos: List<Article>, modifier: Modifier = Modifier) {
+    val thumb = p.videoIds.firstNotNullOfOrNull { id -> videos.firstOrNull { it.meta.id == id } }?.meta?.thumb
+        ?: p.videoIds.firstOrNull()?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+    val shape = RoundedCornerShape(16.dp)
+    if (thumb != null) AsyncImage(
+        model = thumb, contentDescription = null, contentScale = ContentScale.Crop,
+        modifier = modifier.androidxAspect().clip(shape),
+    ) else androidx.compose.foundation.layout.Box(
+        modifier.androidxAspect().clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Rounded.QueueMusic, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+internal fun Modifier.androidxAspect(): Modifier = this.aspectRatio(16 / 9f)
+
+@Composable
+private fun PlaylistHeader(p: Playlist, onBack: () -> Unit) {
+    val app = LocalApp.current
+    val scope = rememberCoroutineScope()
+    val videos by app.library.articles.collectAsState()
+    var confirm by remember { mutableStateOf(false) }
+    BackRow(p.title, onBack, videoCount(p.videoIds.size))
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { app.playlists.setRemoveWhenWatched(p.id, !p.removeWhenWatched) }.padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text("Remove articles as I finish them", style = MaterialTheme.typography.bodyLarge)
+                Text("When you finish one, it leaves this playlist.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            androidx.compose.material3.Switch(checked = p.removeWhenWatched, onCheckedChange = { app.playlists.setRemoveWhenWatched(p.id, it) })
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(onClick = { app.queue.add(*p.videoIds.toTypedArray()) }, shapes = ButtonDefaults.shapes()) {
+                Icon(Icons.Rounded.QueueMusic, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Add to Up next")
+            }
+            TextButton(onClick = { confirm = true }) { Text("Delete playlist") }
+        }
+    }
+    if (confirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirm = false },
+            title = { Text("Delete this playlist?") },
+            text = { Text("Videos with highlights stay in your library. The others are removed.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirm = false
+                    p.videoIds.forEach { id ->
+                        val v = videos.firstOrNull { it.meta.id == id } ?: return@forEach
+                        if (v.playlistId == p.id) {
+                            if (v.highlights.isNotEmpty() || v.clippedAt > 0) app.library.edit(id) { it.copy(playlistId = "") }
+                            else app.removeVideo(id)
+                        }
+                    }
+                    app.playlists.remove(p.id)
+                    onBack()
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { confirm = false }) { Text("Keep") } },
+        )
+    }
+}
+
+// ---------- queue tab ----------
+
+fun LazyListScope.queueTab(queue: List<String>, videos: List<Article>, nowId: String?, onOpenVideo: (String) -> Unit, onClear: () -> Unit, onRemove: (String) -> Unit, onMore: (String) -> Unit) {
+    val now = nowId?.let { id -> videos.firstOrNull { it.meta.id == id } }
+    if (now != null) {
+        item("q-now") { Text("Reading now", Modifier.padding(horizontal = 20.dp, vertical = 8.dp), style = MaterialTheme.typography.titleSmall) }
+        item("q-now-row") { QueueRow(now, onClick = { onOpenVideo(now.meta.id) }, onLongClick = { onMore(now.meta.id) }) }
+    }
+    item("q-label") {
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Up next", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+            if (queue.isNotEmpty()) TextButton(onClick = onClear) { Text("Clear") }
+        }
+    }
+    val rows = queue.mapNotNull { id -> videos.firstOrNull { it.meta.id == id } }
+    if (rows.isEmpty()) {
+        item("q-empty") {
+            Text(
+                "Nothing is waiting. Open the ⋮ menu on an article and choose Up next.",
+                Modifier.padding(24.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    items(rows, key = { "q" + it.meta.id }) { v ->
+        androidx.compose.foundation.layout.Box(Modifier.animateItem()) { QueueRow(v, onClick = { onOpenVideo(v.meta.id) }, onLongClick = { onMore(v.meta.id) }, trailing = {
+            IconButton(onClick = { onRemove(v.meta.id) }) { Icon(Icons.Rounded.Close, "Remove from queue", tint = MaterialTheme.colorScheme.outline) }
+        }) }
+    }
+}
+
+@Composable
+fun QueueRow(v: Article, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, trailing: @Composable () -> Unit = {}) {
+    val app = LocalApp.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    Row(
+        Modifier.fillMaxWidth().combinedClickable(onLongClick = onLongClick?.let { go ->
+            { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); go() }
+        }, onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(
+            model = v.meta.thumb, contentDescription = null, contentScale = ContentScale.Crop,
+            modifier = Modifier.width(96.dp).androidxAspect().clip(RoundedCornerShape(14.dp)),
+        )
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text(v.meta.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+            Text(v.meta.author, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OfflineBadge(v.meta.id)
+        }
+        trailing()
+    }
+}
+
+/** Used by the settings search and the home screen to describe the sort in words. */
+fun AppSettings.sortLabel() = LibrarySorts.firstOrNull { it.first == librarySort }?.second ?: "Recent"
+
+/** A small, plain mark on a video you finished. */
+@Composable
+fun DoneBadge() {
+    val tone = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(Icons.Rounded.CheckCircle, null, Modifier.size(14.dp), tint = tone)
+        Text("Done", maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium, color = tone)
+    }
+}
+
+/** Kept for rows that still ask. Articles have no audio to save yet. */
+@Composable
+fun OfflineBadge(id: String) {}
+
+/**
+ * Opens the note for this video in Obsidian. Uses where the last clip went,
+ * and falls back to finding the note by its source link in the vault index.
+ * Returns false, after telling the user why, when there is nothing to open.
+ */
+private fun videoNote(application: app.obsiread.ObsiReadApp, v: Article): Pair<String, String>? {
+    val s = application.settings.value
+    val vault = v.noteVault.ifBlank { s.vault }
+    if (v.notePath.isNotBlank() && vault.isNotBlank()) return vault to v.notePath
+    val key = s.linkedVault(s.vault) ?: return null
+    val ref = application.vaults.indexes.value[key]?.noteForSource(v.meta.url) ?: return null
+    return key to ref.path
+}
+
+fun openVideoNote(ctx: android.content.Context, application: app.obsiread.ObsiReadApp, v: Article): Boolean {
+    val found = videoNote(application, v)
+    if (found == null) {
+        android.widget.Toast.makeText(ctx, "No note yet. Clip this video first.", android.widget.Toast.LENGTH_SHORT).show()
+        return false
+    }
+    val (vault, path) = found
+    val ok = Sender.openNote(ctx, vault, path)
+    if (!ok) android.widget.Toast.makeText(ctx, "Obsidian is not installed.", android.widget.Toast.LENGTH_SHORT).show()
+    return ok
+}
+
+/** Names you already use, best match first. Typed letters may skip some. An empty box shows them all. */
+internal fun suggestFor(all: List<String>, typed: String, max: Int = 12): List<String> {
+    val q = typed.trim().replace(" ", "")
+    val pool = all.filterNot { it.equals(typed.trim(), true) }
+    if (q.isEmpty()) return pool.take(max)
+    return pool.mapNotNull { n -> app.obsiread.data.Omni.fuzzy(n, q)?.let { n to it.score } }
+        .sortedByDescending { it.second }.map { it.first }.take(max)
+}
+
+/** Asks for a name, then makes the playlist. */
+@Composable
+fun NewPlaylistDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New playlist") },
+        text = {
+            OutlinedTextField(
+                value = name, onValueChange = { name = it }, singleLine = true, shape = RoundedCornerShape(18.dp),
+                placeholder = { Text("For example: Watch this week") },
+            )
+        },
+        confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { onCreate(name.trim()) }) { Text("Create") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
