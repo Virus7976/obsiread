@@ -983,7 +983,12 @@ private object ArticleSpans {
                     set(RelativeSizeSpan(0.82f), a, b)
                     set(QuoteBar(s.mutedColor, density, 0.35f), a, b)
                 }
-                "quote" -> { set(QuoteBar(s.accent, density, 1f), a, b); set(StyleSpan(Typeface.ITALIC), a, b) }
+                // A quote: a thin quiet bar and softer text. No italics, no bright colour.
+                "quote" -> { set(QuoteBar(s.mutedColor, density, 0.45f), a, b); set(ForegroundColorSpan(blend(s.textColor, s.mutedColor, 0.35f)), a, b) }
+                // A comment: who and when, small and grey, with the name in its own colour.
+                "cmeta" -> { set(RelativeSizeSpan(0.8f), a, b); set(ForegroundColorSpan(s.mutedColor), a, b) }
+                "cauthor" -> { set(StyleSpan(Typeface.BOLD), a, b); set(ForegroundColorSpan(AuthorHues[st.level.mod(AuthorHues.size)]), a, b) }
+                "thread" -> set(ThreadLines(st.level, s.mutedColor, density), a, b)
                 "bullet" -> set(ForegroundColorSpan(s.mutedColor), a, b)
                 "caption" -> { set(RelativeSizeSpan(0.82f), a, b); set(ForegroundColorSpan(s.mutedColor), a, b) }
                 "rule" -> { set(ForegroundColorSpan(s.mutedColor), a, b); set(android.text.style.AlignmentSpan.Standard(android.text.Layout.Alignment.ALIGN_CENTER), a, b) }
@@ -998,6 +1003,39 @@ private object ArticleSpans {
             else set(HiddenSpan(), i, i + 1)
             i = sp.indexOf(app.obsiread.data.ArticleDoc.IMAGE_CHAR, i + 1)
         }
+    }
+}
+
+private fun blend(a: Int, b: Int, t: Float): Int {
+    fun ch(x: Int, sh: Int) = (x shr sh) and 0xFF
+    fun mix(sh: Int) = (ch(a, sh) + (ch(b, sh) - ch(a, sh)) * t).toInt()
+    return (0xFF shl 24) or (mix(16) shl 16) or (mix(8) shl 8) or mix(0)
+}
+
+/** Soft colours for comment authors, so one person is easy to follow down a thread. */
+private val AuthorHues = intArrayOf(
+    0xFFE0896A.toInt(), 0xFF7FB2E5.toInt(), 0xFF8CC79A.toInt(), 0xFFD7A65E.toInt(),
+    0xFFB79AE0.toInt(), 0xFF6CC4C0.toInt(), 0xFFE08FB4.toInt(), 0xFFA9B76A.toInt(),
+)
+
+/** A reply sits in from its parent. A thin line for each level shows which comment it answers. */
+private class ThreadLines(level: Int, private val color: Int, private val density: Float) : android.text.style.LeadingMarginSpan {
+    // Past six levels the text would get too narrow to read, so the indent stops there.
+    private val depth = level.coerceIn(0, 6)
+    private val step get() = (16 * density).toInt()
+    override fun getLeadingMargin(first: Boolean) = depth * step
+    override fun drawLeadingMargin(c: Canvas, p: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence, start: Int, end: Int, first: Boolean, layout: android.text.Layout) {
+        if (depth <= 0) return
+        val old = p.color
+        val oldStyle = p.style
+        p.style = Paint.Style.FILL
+        p.color = (color and 0x00FFFFFF) or (0x55 shl 24)
+        for (d in 0 until depth) {
+            val lx = x + d * step + 3 * density
+            c.drawRect(lx, top.toFloat(), lx + 1.5f * density, bottom.toFloat(), p)
+        }
+        p.color = old
+        p.style = oldStyle
     }
 }
 

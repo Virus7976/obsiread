@@ -199,8 +199,8 @@ fun VideoActionsSheet(videoId: String, inPlaylist: Boolean = false, pending: Art
         ) {
             // header: what this video is
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(
-                    v.meta.thumb, null, contentScale = ContentScale.Crop,
+                ArticleThumb(
+                    v.meta, null, contentScale = ContentScale.Crop,
                     modifier = Modifier.width(104.dp).aspectRatio(16 / 9f).clip(RoundedCornerShape(16.dp)),
                 )
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
@@ -615,8 +615,8 @@ fun QueueRow(v: Article, onClick: () -> Unit, onLongClick: (() -> Unit)? = null,
         }, onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = v.meta.thumb, contentDescription = null, contentScale = ContentScale.Crop,
+        ArticleThumb(
+            model = v.meta, contentDescription = null, contentScale = ContentScale.Crop,
             modifier = Modifier.width(96.dp).androidxAspect().clip(RoundedCornerShape(14.dp)),
         )
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {

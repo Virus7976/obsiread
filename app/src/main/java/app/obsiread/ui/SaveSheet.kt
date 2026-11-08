@@ -257,8 +257,8 @@ fun SaveSheet(
         ) {
             Text("Save to Obsidian", style = MaterialTheme.typography.headlineSmall)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                coil3.compose.AsyncImage(
-                    video.meta.thumb, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                ArticleThumb(
+                    video.meta, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     modifier = Modifier.width(88.dp).aspectRatio(16 / 9f).clip(RoundedCornerShape(14.dp)),
                 )
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {

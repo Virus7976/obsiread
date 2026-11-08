@@ -528,7 +528,6 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
             }
         }
 
-        LinkPeek(peekUrl, style.copy(topPx = -1), imageWidth, onClose = { peekUrl = null })
 
         // The top row: back, where it is from, find, and the menu. It slides away while you read down.
         AnimatedVisibility(
@@ -602,6 +601,9 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
         }
 
         if (showReading) ReadingSheet(onDismiss = { showReading = false })
+
+        // The link card goes over everything, the top bar too.
+        LinkPeek(peekUrl, style.copy(topPx = -1), imageWidth, onClose = { peekUrl = null })
 
         SnackbarHost(
             snackbar,

@@ -38,12 +38,12 @@ class AppIcon(val id: String, val label: String, val art: Int)
 
 /** Each one is an activity-alias in the manifest, named Icon plus its id. */
 val AppIcons = listOf(
-    AppIcon("Amethyst", "Amethyst", R.drawable.ic_icon_amethyst),
-    AppIcon("Ruby", "Ruby", R.drawable.ic_launcher_foreground),
-    AppIcon("Sapphire", "Sapphire", R.drawable.ic_icon_sapphire),
-    AppIcon("Emerald", "Emerald", R.drawable.ic_icon_emerald),
-    AppIcon("Amber", "Amber", R.drawable.ic_icon_amber),
-    AppIcon("Classic", "Classic", R.drawable.ic_icon_classic),
+    AppIcon("Amethyst", "Amethyst", R.drawable.ic_icon_amethyst_full),
+    AppIcon("Ruby", "Ruby", R.drawable.ic_launcher_foreground_full),
+    AppIcon("Sapphire", "Sapphire", R.drawable.ic_icon_sapphire_full),
+    AppIcon("Emerald", "Emerald", R.drawable.ic_icon_emerald_full),
+    AppIcon("Amber", "Amber", R.drawable.ic_icon_amber_full),
+    AppIcon("Classic", "Onyx", R.drawable.ic_icon_classic_full),
 )
 
 private fun component(ctx: Context, id: String) = ComponentName(ctx.packageName, "app.obsiread.Icon$id")

@@ -172,6 +172,27 @@ object ArticleDoc {
                         if (sb.length > s0) styles += Styled(s0 until sb.length, "pre")
                         endBlock()
                     }
+                    "comment" -> {
+                        val depth = n.attr("depth").toIntOrNull() ?: 0
+                        endBlock()
+                        val c0 = sb.length
+                        n.selectFirst("cmeta")?.let { m ->
+                            startBlock()
+                            val m0 = sb.length
+                            m.childNodes().forEach { inline(it) }
+                            if (sb.length > m0) {
+                                styles += Styled(m0 until sb.length, "cmeta")
+                                val name = m.selectFirst("b")?.text().orEmpty()
+                                if (name.isNotEmpty()) styles += Styled(m0 until (m0 + name.length).coerceAtMost(sb.length), "cauthor", level = n.attr("hue").toIntOrNull() ?: 0)
+                            }
+                            endBlock()
+                            // The comment sits right under its author line: one line break, not a paragraph gap.
+                            if (sb.endsWith("\n\n")) sb.setLength(sb.length - 1)
+                        }
+                        n.selectFirst("cbody")?.let { block(it, depth) }
+                        endBlock()
+                        if (sb.length - 2 > c0) styles += Styled(c0 until sb.length - 2, "thread", level = depth)
+                    }
                     "img" -> image(n.attr("src"))
                     "figure" -> {
                         n.select("img").forEach { image(it.attr("src")) }
@@ -248,5 +269,5 @@ object ArticleDoc {
         return Built(doc, styles.map { it.copy(range = fit(it.range)) }.filter { !it.range.isEmpty() }, images.filter { it.first < text.length })
     }
 
-    private val blockTags = setOf("p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "pre", "figure", "img", "table", "hr", "div", "section", "article")
+    private val blockTags = setOf("p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "pre", "figure", "img", "table", "hr", "div", "section", "article", "comment", "cbody")
 }

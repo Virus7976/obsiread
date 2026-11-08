@@ -31,6 +31,7 @@ object Defuddle {
     /** Reads the page [view] shows now. Returns the JSON Defuddle gave, as text. Call on the main thread. */
     suspend fun run(view: WebView): String {
         val ctx = view.context
+        expandComments(view)
         val loaded = eval(view, "typeof window.Defuddle === 'function'")
         if (loaded != "true") eval(view, script(ctx) + "\n;'ok'")
         // Defuddle works on a copy of the page, so the page you see is left as it is.
@@ -39,6 +40,8 @@ object Defuddle {
             """
             (function () {
               try {
+                // Hacker News dropped the label on its name links. Put it back so each comment keeps its author.
+                document.querySelectorAll('.comhead > a[href^="user?id="]:not(.hnuser)').forEach(function (a) { a.classList.add('hnuser'); });
                 var r = new window.Defuddle(document, { url: location.href }).parse();
                 return JSON.stringify({
                   ok: true, url: location.href, content: r.content || '', title: r.title || '', author: r.author || '',
@@ -53,6 +56,58 @@ object Defuddle {
         )
         // The answer comes back as a quoted string. Unquote it once to get the JSON.
         return runCatching { Json.decodeFromString<String>(raw) }.getOrNull() ?: throw IOException("The page could not be read.")
+    }
+
+    /**
+     * Many pages show part of themselves and load the rest as you scroll, or when you tap "more comments"
+     * or "load more replies". This does the same in the page, the way you would by hand, until nothing new
+     * comes: forums, comment threads, Q&A sites and long pages alike. Only buttons about comments, replies,
+     * answers or posts in a thread are tapped. Links are never tapped, so it never leaves the page.
+     */
+    private suspend fun expandComments(view: WebView) {
+        val started = eval(
+            view,
+            """
+            (function () {
+              window.__orDone = false;
+              var want = /\b(more|load|show|view|see|expand|older|all)\b.{0,24}\b(comments?|repl(y|ies)|answers?|responses?|messages?|posts?|threads?|hidden items?)\b|\b\d+\s+more\b/i;
+              var skip = /\b(articles?|stories|videos?|products?|news|sign|log ?in|subscribe|share|report|hide|collapse)\b/i;
+              function buttons(root, out) {
+                root.querySelectorAll('button, [role=button], summary').forEach(function (b) {
+                  var t = (b.innerText || b.textContent || '').trim();
+                  if (t.length > 0 && t.length < 60 && want.test(t) && !skip.test(t) && !b.closest('a[href]') && !b.disabled) out.push(b);
+                });
+                root.querySelectorAll('*').forEach(function (e) { if (e.shadowRoot) buttons(e.shadowRoot, out); });
+                return out;
+              }
+              var tapped = new WeakSet();
+              (async function () {
+                var last = -1, same = 0, any = false;
+                for (var i = 0; i < 40 && same < 2; i++) {
+                  window.scrollTo(0, document.body.scrollHeight);
+                  var bs = buttons(document, []).filter(function (b) { return !tapped.has(b); });
+                  bs.slice(0, 25).forEach(function (b) { tapped.add(b); try { b.click(); } catch (e) {} });
+                  await new Promise(function (r) { setTimeout(r, bs.length ? 1000 : 700); });
+                  var n = document.body.innerText.length;
+                  if (bs.length) any = true;
+                  // A page that only grows as you scroll (a feed) gets five rounds, no more.
+                  if (!any && i >= 4) break;
+                  if (n === last && bs.length === 0) same++; else same = 0;
+                  last = n;
+                }
+                window.scrollTo(0, 0);
+                window.__orDone = true;
+              })();
+              return 'go';
+            })()
+            """.trimIndent(),
+        )
+        if (!started.contains("go")) return
+        // Up to about 40 seconds for a very long thread.
+        repeat(80) {
+            delay(500)
+            if (eval(view, "window.__orDone === true") == "true") return
+        }
     }
 
     private suspend fun eval(view: WebView, js: String): String = suspendCancellableCoroutine { c ->

@@ -46,7 +46,7 @@ object Markdown {
         fun para(text: String) {
             val t = text.trim()
             if (t.isEmpty()) return
-            t.lines().forEach { out.append(prefix).append(it.trimEnd()).append('\n') }
+            t.lines().forEach { out.append(prefix).append(it.trim()).append('\n') }
             out.append(prefix.trimEnd()).append('\n')
         }
         val inlineRun = StringBuilder()
@@ -74,6 +74,17 @@ object Markdown {
                     out.append(prefix.trimEnd()).append('\n')
                 }
                 "blockquote" -> { flush(); blocks(n, out, "$prefix> "); out.append(prefix.trimEnd()).append('\n') }
+                "comment" -> {
+                    flush()
+                    val q = prefix + "> ".repeat((n.attr("depth").toIntOrNull() ?: 0) + 1)
+                    n.selectFirst("cmeta")?.let { m ->
+                        val name = m.selectFirst("b")?.text().orEmpty()
+                        val rest = m.text().removePrefix(name).trim()
+                        para2(out, q, "**$name**" + (if (rest.isNotEmpty()) " $rest" else ""))
+                    }
+                    n.selectFirst("cbody")?.let { blocks(it, out, q) }
+                    out.append('\n')
+                }
                 "pre" -> {
                     flush()
                     out.append(prefix).append("```\n")
@@ -93,6 +104,10 @@ object Markdown {
             }
         }
         flush()
+    }
+
+    private fun para2(out: StringBuilder, prefix: String, text: String) {
+        out.append(prefix).append(text.trim()).append('\n').append(prefix.trimEnd()).append('\n')
     }
 
     private fun table(t: Element, out: StringBuilder, prefix: String) {

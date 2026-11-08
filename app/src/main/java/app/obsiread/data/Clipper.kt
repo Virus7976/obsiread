@@ -96,7 +96,8 @@ object Clipper {
             published = f.published.trim(),
             url = url,
             site = f.site.trim(),
-            image = f.image.trim().takeIf { it.startsWith("http") }.orEmpty(),
+            // The page's main picture, or else the first picture in the article.
+            image = f.image.trim().takeIf { it.startsWith("http") } ?: body.selectFirst("img[src^=http]")?.attr("src").orEmpty(),
             words = if (f.wordCount > 0) f.wordCount else text.split(Regex("\\s+")).count { it.isNotBlank() },
             lang = f.language.substringBefore('-').lowercase(),
         )
@@ -115,7 +116,40 @@ object Clipper {
     private val keep = setOf(
         "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "pre", "code", "a", "em", "i", "strong", "b",
         "img", "figure", "figcaption", "br", "hr", "table", "thead", "tbody", "tr", "td", "th", "sup", "sub", "div", "span", "section", "article",
+        "comment", "cmeta", "cbody",
     )
+
+    /**
+     * Defuddle writes a comment thread (Reddit, Hacker News, GitHub and more) as quotes inside quotes, one
+     * level per reply. That reads as a wall of quote bars. Each comment becomes one flat <comment> block
+     * instead, with its reply depth, a short line for who wrote it and when, and its text.
+     */
+    private fun flattenComments(body: Element) {
+        for (box in body.select("div.comments")) {
+            val flat = ArrayList<Element>()
+            for (c in box.select("div.comment")) {
+                val depth = c.parents().takeWhile { it !== box }.count { it.tagName() == "blockquote" } - 1
+                val meta = c.selectFirst(".comment-metadata")
+                val author = meta?.selectFirst(".comment-author")?.text()?.trim().orEmpty()
+                val date = (meta?.selectFirst(".comment-link") ?: meta?.selectFirst(".comment-date"))?.text()?.trim().orEmpty()
+                val points = meta?.selectFirst(".comment-points")?.text()?.trim().orEmpty()
+                val el = Element("comment").attr("depth", depth.coerceAtLeast(0).toString()).attr("hue", (Math.floorMod(author.hashCode(), 8)).toString())
+                el.appendElement("cmeta").apply {
+                    appendElement("b").text(author.ifBlank { "Someone" })
+                    val rest = listOf(date, points).filter { it.isNotBlank() }.joinToString("  ·  ")
+                    if (rest.isNotBlank()) appendText("  ·  $rest")
+                }
+                val content = c.selectFirst(".comment-content")
+                el.appendElement("cbody").apply { content?.childNodes()?.toList()?.forEach { appendChild(it.clone()) } }
+                flat.add(el)
+            }
+            if (flat.isEmpty()) continue
+            val heading = box.selectFirst("h2")?.clone()
+            box.empty()
+            heading?.let { box.appendChild(it) }
+            flat.forEach { box.appendChild(it) }
+        }
+    }
 
     /**
      * Keeps only plain article markup. Every link and picture gets its full address, and lazy
@@ -126,6 +160,7 @@ object Clipper {
         val body = doc.body()
         body.appendChild(root.clone())
         body.select("script, style, noscript, iframe, form, button, input, svg, nav, aside, footer, header").remove()
+        flattenComments(body)
         for (img in body.select("img")) {
             val src = listOf("data-src", "data-original", "data-lazy-src", "src").firstNotNullOfOrNull { a ->
                 img.absUrl(a).takeIf { it.startsWith("http") }
@@ -152,10 +187,12 @@ object Clipper {
         for (el in body.allElements.drop(1)) {
             val tag = el.tagName()
             if (tag !in keep) { el.unwrap(); continue }
-            if (tag != "a" && tag != "img") el.clearAttributes()
+            if (tag != "a" && tag != "img" && tag != "comment") el.clearAttributes()
         }
+        // A heading with no letters or numbers, such as "...", is decoration, not a heading.
+        body.select("h1, h2, h3, h4, h5, h6").filter { h -> h.text().none { it.isLetterOrDigit() } }.forEach { it.remove() }
         // Wrappers with nothing in them.
-        for (el in body.select("div, span, section, article, p").reversed()) {
+        for (el in body.select("div, span, section, article, p, cbody").reversed()) {
             if (el.children().isEmpty() && el.text().isBlank()) el.remove()
         }
         return body

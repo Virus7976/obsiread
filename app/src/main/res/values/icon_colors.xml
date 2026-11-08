@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="icon_bg_amethyst">#000000</color>
+    <color name="icon_bg_ruby">#000000</color>
+    <color name="icon_bg_sapphire">#000000</color>
+    <color name="icon_bg_emerald">#000000</color>
+    <color name="icon_bg_amber">#000000</color>
+    <color name="icon_bg_classic">#000000</color>
+</resources>

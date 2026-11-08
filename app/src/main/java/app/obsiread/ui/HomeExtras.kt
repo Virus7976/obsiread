@@ -112,8 +112,8 @@ fun VideoGridRow(pair: List<Article>, onOpen: (String) -> Unit, onMore: (String)
                 Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).combinedClickable(onLongClick = { onMore(v.meta.id) }) { onOpen(v.meta.id) },
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                AsyncImage(
-                    model = v.meta.thumb, contentDescription = null, contentScale = ContentScale.Crop,
+                ArticleThumb(
+                    model = v.meta, contentDescription = null, contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxWidth().aspectRatio(16 / 9f).clip(RoundedCornerShape(18.dp)),
                     alpha = if (v.done) 0.5f else 1f,
                 )

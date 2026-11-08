@@ -467,8 +467,8 @@ private fun PreviewCard(
     ) {
         Column {
             Box {
-                AsyncImage(
-                    model = meta.thumb,
+                ArticleThumb(
+                    model = meta,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxWidth().aspectRatio(16 / 9f).clip(MaterialTheme.shapes.extraLarge),
@@ -530,8 +530,8 @@ private fun VideoRow(v: Article, onMore: (String) -> Unit, onClick: () -> Unit) 
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = v.meta.thumb,
+        ArticleThumb(
+            model = v.meta,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.width(116.dp).aspectRatio(16 / 9f).clip(RoundedCornerShape(radius)),
@@ -594,8 +594,8 @@ private fun VideoCard(v: Article, onMore: (String) -> Unit, pinned: Boolean = fa
         }, onClick = onClick),
     ) {
         Box {
-            AsyncImage(
-                model = v.meta.thumb, contentDescription = null, contentScale = ContentScale.Crop,
+            ArticleThumb(
+                model = v.meta, contentDescription = null, contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxWidth().aspectRatio(16 / 9f).clip(RoundedCornerShape(18.dp)),
             )
             if (pinned) Icon(
@@ -697,7 +697,7 @@ private fun ContinueRow(v: Article, onMore: (String) -> Unit, onDone: (String) -
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(116.dp).aspectRatio(16 / 9f).clip(RoundedCornerShape(16.dp))) {
-            AsyncImage(model = v.meta.thumb, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            ArticleThumb(model = v.meta, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             // The line sits on the picture, like YouTube, so the row stays one clean shape.
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(androidx.compose.ui.graphics.Color(0x66FFFFFF))) {
                 Box(Modifier.fillMaxWidth(frac).height(3.dp).background(scheme.primary))
