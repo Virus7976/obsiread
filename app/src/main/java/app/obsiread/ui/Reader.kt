@@ -42,6 +42,9 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
@@ -156,6 +159,13 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ReaderScreen(videoId: String, onBack: () -> Unit) {
+    val s by LocalApp.current.settings.state.collectAsState()
+    ReaderTheme(s.readerTheme) { ReaderBody(videoId, onBack) }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     val app = LocalApp.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -176,24 +186,11 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     var headerHidden by remember { mutableStateOf(false) }
     var reloads by remember(videoId) { mutableIntStateOf(0) }
-    // Full screen reading: no top row, bottom bar, status bar or navigation bar.
-    var immersive by remember { mutableStateOf(false) }
-    androidx.activity.compose.BackHandler(enabled = immersive) { immersive = false }
+    var showReading by remember { mutableStateOf(false) }
     val activity = remember(ctx) {
         var c: android.content.Context = ctx
         while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
         c as? android.app.Activity
-    }
-    DisposableEffect(immersive) {
-        val window = activity?.window
-        val controller = window?.let { androidx.core.view.WindowInsetsControllerCompat(it, it.decorView) }
-        if (immersive) {
-            controller?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-        } else {
-            controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-        }
-        onDispose { controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars()) }
     }
     val view = LocalView.current
     DisposableEffect(settings.keepScreenOn) {
@@ -216,14 +213,7 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
 
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
-    val readerTypeface = remember(settings.readerFont, settings.customFontPath) {
-        when (settings.readerFont) {
-            "sans" -> ResourcesCompat.getFont(ctx, R.font.atkinson_regular)
-            "system" -> Typeface.DEFAULT
-            "custom" -> customTypeface(settings.customFontPath) ?: ResourcesCompat.getFont(ctx, R.font.newsreader)
-            else -> ResourcesCompat.getFont(ctx, R.font.newsreader)
-        }
-    }
+    val readerTypeface = remember(settings.readerFont, settings.customFontPath, settings.fontWeight) { readerTypeface(ctx, settings) }
     val style = ReaderStyle(
         textColor = scheme.onSurface.toArgb(),
         mutedColor = scheme.onSurfaceVariant.toArgb(),
@@ -235,6 +225,13 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
         holdSelects = settings.holdSelects,
         maxWidthPx = with(density) { (settings.maxWidth * settings.readerFontSize).dp.roundToPx() },
         highlighterOn = settings.highlighterEnabled,
+        paragraphMult = settings.paragraphSpacing,
+        letterEm = settings.letterSpacing,
+        sidePx = with(density) { settings.sideMargin.dp.roundToPx() },
+        // The top bar floats over the text. This room keeps it off the first lines.
+        topPx = with(density) { 60.dp.roundToPx() },
+        justify = settings.justify,
+        hyphenate = settings.hyphenate,
     )
     // A picture fills the text column, and no more.
     val screenW = ctx.resources.displayMetrics.widthPixels
@@ -298,70 +295,27 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
         runCatching { ctx.startActivity(Intent.createChooser(send, null)) }
     }
 
+    // The bars hide while you read. The status bar goes with them, so only the text is left.
+    val barsHidden = headerHidden && !searching && editingId == null && !showReading
+    val immersive = barsHidden && settings.fullScreenReading
+    val statusTop = WindowInsets.statusBarsIgnoringVisibility.asPaddingValues().calculateTopPadding()
+    DisposableEffect(immersive) {
+        val window = activity?.window
+        val controller = window?.let { androidx.core.view.WindowInsetsControllerCompat(it, it.decorView) }
+        if (immersive) {
+            controller?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
+        onDispose { controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars()) }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Spacer(Modifier.height(if (immersive) 28.dp else WindowInsets.statusBars.asPaddingValues().calculateTopPadding()))
-            // The top row: back, where it is from, find, and the menu. It slides away while you read down.
-            AnimatedVisibility(
-                visible = !immersive && (!headerHidden || searching || editingId != null),
-                enter = expandVertically(spring(1f, 500f)) + fadeIn(),
-                exit = shrinkVertically(spring(1f, 500f)) + fadeOut(),
-            ) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
-                    Text(
-                        video.meta.siteName, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleSmall, color = scheme.onSurfaceVariant,
-                    )
-                    IconButton(onClick = { searching = !searching }) { Icon(Icons.Rounded.Search, "Find in this article") }
-                    Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "More") }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, shape = RoundedCornerShape(24.dp)) {
-                            Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                MenuTile("Find", Icons.Rounded.Search, on = searching) { menu = false; searching = true }
-                                MenuTile("Contents", Icons.Rounded.FormatListBulleted, on = false, enabled = heads.isNotEmpty()) { menu = false; showContents = true }
-                                MenuTile("Text only", Icons.Rounded.Fullscreen, on = false) { menu = false; immersive = true }
-                            }
-                            androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp), color = scheme.outlineVariant.copy(alpha = 0.4f))
-                            DropdownMenuItem(
-                                text = { Text("Mark as done") },
-                                leadingIcon = { Icon(Icons.Rounded.TaskAlt, null) },
-                                trailingIcon = { if (video.done) Icon(Icons.Rounded.Check, "On", tint = scheme.primary) },
-                                onClick = { app.setDone(videoId, !video.done) },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Open the web page") },
-                                leadingIcon = { Icon(Icons.Rounded.OpenInNew, null) },
-                                onClick = { menu = false; openLink(video.meta.url) },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Share the link") },
-                                leadingIcon = { Icon(Icons.Rounded.Share, null) },
-                                onClick = { menu = false; share() },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Read the page again") },
-                                leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
-                                onClick = {
-                                    menu = false
-                                    scope.launch {
-                                        runCatching { app.refresh(videoId) }
-                                            .onSuccess { reloads++; snackbar.showSnackbar("Read the page again.") }
-                                            .onFailure { snackbar.showSnackbar(it.message ?: "Could not read the page.") }
-                                    }
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Tags and more") },
-                                leadingIcon = { Icon(Icons.Rounded.Sell, null) },
-                                onClick = { menu = false; showActions = true },
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (searching && !immersive) {
+            // Fixed room for the status bar, shown or not, so the text never jumps.
+            Spacer(Modifier.height(statusTop))
+            if (searching) {
                 FindBar(
                     query = query,
                     count = matchCount,
@@ -380,7 +334,7 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
             var settled by remember(videoId) { mutableStateOf(false) }
             LaunchedEffect(videoId) { delay(380); settled = true }
             val fade by androidx.compose.animation.core.animateFloatAsState(if (settled) 1f else 0f, androidx.compose.animation.core.tween(220), label = "pageFade")
-            Box(Modifier.weight(1f).fillMaxWidth().then(if (immersive || editingId != null) Modifier else Modifier.navigationBarsPadding()).clipToBounds().graphicsLayer { alpha = fade }) {
+            Box(Modifier.weight(1f).fillMaxWidth().then(if (editingId != null) Modifier else Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility)).clipToBounds().graphicsLayer { alpha = fade }) {
                 val d = doc
                 val b = built
                 if (d != null && b != null && settled) {
@@ -391,7 +345,8 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
                             tv.onSeek = { }
                             tv.onUserScroll = { dy, atTop ->
                                 if (atTop) headerHidden = false
-                                else if (dy > 6) headerHidden = true else if (dy < -6) headerHidden = false
+                                // Only a tap brings the bars back. Scrolling up never pops them in under your finger.
+                                else if (settings.hideBarsOnScroll && dy > 6) headerHidden = true
                             }
                             tv.onScrollDelta = {
                                 progress = tv.progress()
@@ -408,7 +363,8 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
                                     h != null -> { editingId = h.id; tv.startResize(h.id, h.w0..h.w1); true }
                                     // A tap beside it puts it away.
                                     editingId != null -> { editingId = null; true }
-                                    link != null -> { peekUrl = link.href; true }
+                                    link != null -> { if (settings.linksInApp) peekUrl = link.href else openLink(link.href); true }
+                                    settings.tapForBars -> { headerHidden = !headerHidden; true }
                                     else -> true
                                 }
                             }
@@ -491,7 +447,7 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
 
         // Bottom bar: highlights, how much is left, and Clip. It slides away while you read down.
         AnimatedVisibility(
-            visible = !headerHidden && !immersive && editingId == null,
+            visible = !barsHidden && editingId == null,
             modifier = Modifier.align(Alignment.BottomCenter),
             enter = androidx.compose.animation.slideInVertically(spring(1f, 500f)) { it },
             exit = androidx.compose.animation.slideOutVertically(spring(1f, 500f)) { it },
@@ -517,6 +473,9 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
                                 Spacer(Modifier.width(8.dp))
                                 Text(timeLeft, maxLines = 1, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
                             } else Text(timeLeft, maxLines = 1, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = { showReading = true }) {
+                            Icon(Icons.Rounded.TextFields, "Reading settings", Modifier.size(22.dp), tint = scheme.onSurfaceVariant)
                         }
                         // The loud button means one thing: you marked something that is not in Obsidian yet.
                         val clipped = video.clippedAt > 0
@@ -569,18 +528,80 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
             }
         }
 
-        LinkPeek(peekUrl, style, imageWidth, onClose = { peekUrl = null })
+        LinkPeek(peekUrl, style.copy(topPx = -1), imageWidth, onClose = { peekUrl = null })
 
-        // The only control left in full screen. It is faint, so it does not pull the eye from the text.
+        // The top row: back, where it is from, find, and the menu. It slides away while you read down.
         AnimatedVisibility(
-            visible = immersive,
-            modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.displayCutout).padding(top = 6.dp, end = 6.dp),
-            enter = fadeIn(), exit = fadeOut(),
+            visible = !barsHidden,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = statusTop),
+            enter = androidx.compose.animation.slideInVertically(spring(1f, 600f)) { -it / 2 } + fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically(spring(1f, 600f)) { -it / 2 } + fadeOut(),
         ) {
-            IconButton(onClick = { immersive = false }) {
-                Icon(Icons.Rounded.FullscreenExit, "Leave full screen", tint = scheme.onSurface.copy(alpha = 0.35f))
+            Row(Modifier.fillMaxWidth().background(scheme.background).padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
+                Text(
+                    video.meta.siteName, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleSmall, color = scheme.onSurfaceVariant,
+                )
+                IconButton(onClick = { searching = !searching }) { Icon(Icons.Rounded.Search, "Find in this article") }
+                Box {
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "More") }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, shape = RoundedCornerShape(24.dp)) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MenuTile("Find", Icons.Rounded.Search, on = searching) { menu = false; searching = true }
+                            MenuTile("Contents", Icons.Rounded.FormatListBulleted, on = false, enabled = heads.isNotEmpty()) { menu = false; showContents = true }
+                            MenuTile("Reading", Icons.Rounded.TextFields, on = showReading) { menu = false; showReading = true }
+                        }
+                        androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp), color = scheme.outlineVariant.copy(alpha = 0.4f))
+                        DropdownMenuItem(
+                            text = { Text("Mark as done") },
+                            leadingIcon = { Icon(Icons.Rounded.TaskAlt, null) },
+                            trailingIcon = { if (video.done) Icon(Icons.Rounded.Check, "On", tint = scheme.primary) },
+                            onClick = { app.setDone(videoId, !video.done) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Open the web page") },
+                            leadingIcon = { Icon(Icons.Rounded.OpenInNew, null) },
+                            onClick = { menu = false; openLink(video.meta.url) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Share the link") },
+                            leadingIcon = { Icon(Icons.Rounded.Share, null) },
+                            onClick = { menu = false; share() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Read the page again") },
+                            leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
+                            onClick = {
+                                menu = false
+                                scope.launch {
+                                    runCatching { app.refresh(videoId) }
+                                        .onSuccess { reloads++; snackbar.showSnackbar("Read the page again.") }
+                                        .onFailure { snackbar.showSnackbar(it.message ?: "Could not read the page.") }
+                                }
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Tags and more") },
+                            leadingIcon = { Icon(Icons.Rounded.Sell, null) },
+                            onClick = { menu = false; showActions = true },
+                        )
+                    }
+                }
             }
         }
+
+
+        // While the bars are hidden: only how far you are, small and faint.
+        AnimatedVisibility(
+            visible = barsHidden && settings.showProgressHidden && built != null,
+            modifier = Modifier.align(Alignment.BottomEnd).windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(end = 18.dp, bottom = 6.dp),
+            enter = fadeIn(), exit = fadeOut(),
+        ) {
+            Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = scheme.onSurface.copy(alpha = 0.4f))
+        }
+
+        if (showReading) ReadingSheet(onDismiss = { showReading = false })
 
         SnackbarHost(
             snackbar,

@@ -198,6 +198,27 @@ data class AppSettings(
     val lineHeight: Float = 1.6f,
     val maxWidth: Float = 38f,
     val lineLength: Int = 1, // 0 short, 1 medium, 2 long
+    /** The reader's own colours. "app" follows the app theme. */
+    val readerTheme: String = "app",
+    val fontWeight: Int = 400,
+    /** The gap between paragraphs, as a part of one line. */
+    val paragraphSpacing: Float = 1f,
+    /** Extra room between letters, in em. */
+    val letterSpacing: Float = 0f,
+    /** The space at each side of the text, in dp. */
+    val sideMargin: Int = 18,
+    val justify: Boolean = false,
+    val hyphenate: Boolean = true,
+    /** A tap on the page shows or hides the bars. */
+    val tapForBars: Boolean = true,
+    /** The bars go away when you read down. */
+    val hideBarsOnScroll: Boolean = true,
+    /** The status bar goes too when the bars are hidden. */
+    val fullScreenReading: Boolean = true,
+    /** A small "12%" in the corner while the bars are hidden. */
+    val showProgressHidden: Boolean = true,
+    /** A link opens in a reading card in the app. Off opens your browser. */
+    val linksInApp: Boolean = true,
     val pinPlayer: Boolean = true,
     val highlightActiveLine: Boolean = true,
     val autoScroll: Boolean = false,

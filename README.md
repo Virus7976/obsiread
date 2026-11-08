@@ -52,7 +52,7 @@
 
 ### Coming next
 
-- Reader controls: font, layout, themes, and a reading mode that hides everything until you tap.
+
 - Read aloud with good voices: the phone's, cloud voices, and offline voices.
 - RSS feeds.
 

@@ -45,6 +45,16 @@ data class ReaderStyle(
     val holdSelects: String,
     val maxWidthPx: Int,
     val highlighterOn: Boolean,
+    /** The gap between paragraphs, as a part of one line. */
+    val paragraphMult: Float = 1f,
+    /** Extra room between letters, in em. */
+    val letterEm: Float = 0f,
+    /** The least space at each side, in px. Below 0 means the normal 18 dp. */
+    val sidePx: Int = -1,
+    /** Space above the first line, in px, so floating bars do not cover it. Below 0 means 10 dp. */
+    val topPx: Int = -1,
+    val justify: Boolean = false,
+    val hyphenate: Boolean = true,
 )
 
 /** Takes no room and draws nothing. Used to hide caption marks such as ">>" and "[music]". */
@@ -500,8 +510,12 @@ class TranscriptView(context: Context) : ScrollView(context) {
             tv.setLineSpacing(0f, 1f)
             tv.typeface = s.typeface ?: Typeface.DEFAULT
             // One fixed line height, with the spare room above the text. Absolute, so it never adds up.
+            tv.letterSpacing = s.letterEm
+            tv.justificationMode = if (s.justify) android.text.Layout.JUSTIFICATION_MODE_INTER_WORD else android.text.Layout.JUSTIFICATION_MODE_NONE
+            tv.hyphenationFrequency = if (s.hyphenate) android.text.Layout.HYPHENATION_FREQUENCY_NORMAL else android.text.Layout.HYPHENATION_FREQUENCY_NONE
             val m = tv.paint.fontMetricsInt
-            sp.setSpan(SpaceAbove(Math.round(s.lineMult * (m.descent - m.ascent))), 0, sp.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+            val line = Math.round(s.lineMult * (m.descent - m.ascent))
+            sp.setSpan(SpaceAbove(line, Math.round(line * s.paragraphMult)), 0, sp.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
             tv.setText(sp, TextView.BufferType.SPANNABLE)
             tv.highlightColor = (s.accent and 0x00FFFFFF) or 0x55000000
             tv.setLinkTextColor(s.accent)
@@ -641,10 +655,12 @@ class TranscriptView(context: Context) : ScrollView(context) {
     }
 
     private fun applySidePadding(w: Int) {
-        val max = style?.maxWidthPx ?: return
-        val base = dp(18)
+        val st = style ?: return
+        val max = st.maxWidthPx
+        val base = if (st.sidePx >= 0) st.sidePx else dp(18)
+        val top = if (st.topPx >= 0) st.topPx else dp(10)
         val side = if (w > max + base * 2) (w - max) / 2 else base
-        if (tv.paddingLeft != side) tv.setPadding(side, tv.paddingTop, side, tv.paddingBottom)
+        if (tv.paddingLeft != side || tv.paddingTop != top) tv.setPadding(side, top, side, tv.paddingBottom)
     }
 
     // ---------- highlights and the active word ----------
@@ -921,9 +937,18 @@ class TranscriptView(context: Context) : ScrollView(context) {
     }
 }
 
-/** Makes every line [total] pixels tall, with the spare room above the text instead of below it. */
-private class SpaceAbove(private val total: Int) : android.text.style.LineHeightSpan {
+/**
+ * Makes every line [total] pixels tall, with the spare room above the text instead of below it. The empty
+ * line between two paragraphs is [blank] pixels tall, so the paragraph gap can be set apart from it.
+ */
+private class SpaceAbove(private val total: Int, private val blank: Int = total) : android.text.style.LineHeightSpan {
     override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: android.graphics.Paint.FontMetricsInt) {
+        if (end - start <= 1 && start < text.length && text[start] == '\n' && start > 0 && text[start - 1] == '\n') {
+            fm.ascent = fm.descent - blank.coerceAtLeast(1)
+            fm.top = fm.ascent
+            fm.bottom = fm.descent
+            return
+        }
         val want = fm.descent - total
         if (want < fm.ascent) {
             fm.top -= fm.ascent - want
