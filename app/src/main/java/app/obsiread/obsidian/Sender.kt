@@ -8,7 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 
-data class SendResult(val ok: Boolean, val message: String)
+data class SendResult(val ok: Boolean, val message: String, val path: String = "")
 
 /** The four ways the web clipper can finish a clip. */
 object Sender {
@@ -120,7 +120,8 @@ object Sender {
         }
         return runCatching {
             context.contentResolver.openOutputStream(target.uri, "wt")!!.bufferedWriter().use { it.write(text) }
-            SendResult(true, "Saved ${target.name}.")
+            val where = note.folder.split("/").filter { it.isNotBlank() } + target.name.orEmpty().removeSuffix(".md")
+            SendResult(true, "Saved ${target.name}.", where.joinToString("/"))
         }.getOrElse { SendResult(false, "Could not write the file.") }
     }
 }
