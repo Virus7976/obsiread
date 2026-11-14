@@ -1,8 +1,16 @@
 package app.obsiread
 
-import app.obsiread.data.Highlight
-import app.obsiread.data.Highlights
-import app.obsiread.data.Word
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
+import app.obsi.core.data.Highlight
+import app.obsi.core.data.Highlights
+import app.obsi.core.data.Word
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

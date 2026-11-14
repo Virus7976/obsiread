@@ -1,7 +1,15 @@
 package app.obsiread
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import app.obsiread.data.AppSettings
-import app.obsiread.data.ClipTemplate
+import app.obsi.core.data.ClipTemplate
 import app.obsiread.data.Article
 import app.obsiread.data.ArticleMeta
 import app.obsiread.obsidian.NoteBuilder

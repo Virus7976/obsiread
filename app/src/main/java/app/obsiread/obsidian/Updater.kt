@@ -1,7 +1,15 @@
 package app.obsiread.obsidian
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import app.obsiread.data.AppSettings
-import app.obsiread.data.ObsidianText
+import app.obsi.core.data.ObsidianText
 import app.obsiread.data.Article
 
 /**

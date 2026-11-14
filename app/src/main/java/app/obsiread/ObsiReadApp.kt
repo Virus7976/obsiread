@@ -1,5 +1,13 @@
 package app.obsiread
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import android.app.Application
 import app.obsiread.data.Article
 import app.obsiread.data.Clipper
@@ -7,18 +15,19 @@ import app.obsiread.data.Library
 import app.obsiread.data.Playlists
 import app.obsiread.data.PlayQueue
 import app.obsiread.data.SettingsStore
-import app.obsiread.data.VaultStore
+import app.obsi.core.data.VaultStore
 import app.obsiread.obsidian.ClipperImport
 import app.obsiread.update.SelfUpdate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory {
+class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.core.ObsiHost {
     /**
      * Pictures are downloaded with the app's own name. Some sites, such as Wikipedia, refuse a download
      * that does not say who is asking.
@@ -38,7 +47,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory {
         private set
     lateinit var updates: SelfUpdate
         private set
-    lateinit var vaults: VaultStore
+    override lateinit var vaults: VaultStore
         private set
     lateinit var playlists: Playlists
         private set
@@ -46,6 +55,13 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory {
         private set
     lateinit var reviews: app.obsiread.data.Reviews
         private set
+
+    override val recentTags: kotlinx.coroutines.flow.StateFlow<List<String>> by lazy {
+        settings.state.map { it.recentTags }.stateIn(appScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, settings.value.recentTags)
+    }
+
+    /** An article another Obsi app asked to open, and where in it. The app opens it and clears it. */
+    val openItem = MutableStateFlow<Pair<String, Double>?>(null)
 
     val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default)
 
@@ -60,8 +76,10 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        app.obsi.core.Brand.init(app.obsi.core.ObsiApp.Read)
+        app.obsi.core.share.SharedHighlights.source = ::sharedHighlights
         settings = SettingsStore(this)
-        vaults = VaultStore(this, settings)
+        vaults = VaultStore(this) { settings.value.vaultFolders }
         updates = SelfUpdate(this, settings)
         library = Library(this)
         reviews = app.obsiread.data.Reviews(this)
@@ -129,6 +147,17 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory {
     fun setDone(id: String, done: Boolean) {
         if (done) { library.edit(id) { if (it.done) it else it.copy(doneAt = System.currentTimeMillis()) }; queue.remove(id) }
         else library.edit(id) { it.copy(doneAt = 0L) }
+    }
+
+    /** Every highlight, for the other Obsi apps to show. */
+    private fun sharedHighlights(): List<app.obsi.core.share.SharedHighlight> = library.articles.value.flatMap { a ->
+        a.highlights.map { h ->
+            app.obsi.core.share.SharedHighlight(
+                app = app.obsi.core.ObsiApp.Read, itemId = a.meta.id, itemTitle = a.meta.title, text = h.text, note = h.note,
+                color = app.obsi.core.data.HighlightColors.getOrNull(h.color)?.ui ?: 0xFFF2C14E, at = h.startSec.toString(),
+                place = a.meta.siteName, created = h.createdAt.takeIf { it > 0 } ?: a.addedAt, tags = h.tags,
+            )
+        }
     }
 
     /** First launch: load the clipper templates that ship inside the app. */

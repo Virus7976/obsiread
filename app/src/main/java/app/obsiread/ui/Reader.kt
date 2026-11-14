@@ -1,5 +1,13 @@
 package app.obsiread.ui
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -137,11 +145,11 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.obsiread.R
-import app.obsiread.data.Highlight
-import app.obsiread.data.HighlightColors
-import app.obsiread.data.Highlights
+import app.obsi.core.data.Highlight
+import app.obsi.core.data.HighlightColors
+import app.obsi.core.data.Highlights
 import app.obsiread.data.Article
-import app.obsiread.data.TranscriptDoc
+import app.obsi.core.data.TranscriptDoc
 import app.obsiread.data.ArticleDoc
 import app.obsiread.data.Markdown
 import androidx.compose.material.icons.rounded.Share
@@ -150,7 +158,7 @@ import kotlinx.coroutines.coroutineScope
 import coil3.toBitmap
 import coil3.request.allowHardware
 import app.obsiread.data.Place
-import app.obsiread.obsidian.Template
+import app.obsi.core.obsidian.Template
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -889,7 +897,7 @@ private fun HighlightNoteBar(
 
     if (linking && vault != null) OmniSheet(
         vault = vault, title = "Link a note",
-        kinds = setOf(app.obsiread.data.OmniKind.Note),
+        kinds = setOf(app.obsi.core.data.OmniKind.Note),
         onPick = { item ->
             val name = item.title
             text = (if (linkTyped && text.endsWith("[[")) text.removeSuffix("[[") else text.trimEnd() + (if (text.isBlank()) "" else " ")) + "[[$name]]"

@@ -1,9 +1,17 @@
 package app.obsiread.ui
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import app.obsiread.data.NoteName
+import app.obsi.core.data.NoteName
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,14 +66,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.obsiread.data.Line
-import app.obsiread.data.NoteRef
-import app.obsiread.data.ClipMemo
-import app.obsiread.data.OmniKind
+import app.obsi.core.data.Line
+import app.obsi.core.data.NoteRef
+import app.obsi.core.data.ClipMemo
+import app.obsi.core.data.OmniKind
 import app.obsiread.data.Article
 import app.obsiread.obsidian.NoteBuilder
-import app.obsiread.obsidian.SendResult
-import app.obsiread.obsidian.Sender
+import app.obsi.core.obsidian.SendResult
+import app.obsi.core.obsidian.Sender
 import app.obsiread.obsidian.Updater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -279,7 +287,7 @@ fun SaveSheet(
             if (sendAfterLink && key != null) { sendAfterLink = false; send("addToObsidian") }
         }
 
-        fun setValue(p: app.obsiread.obsidian.BuiltProperty, v: String) {
+        fun setValue(p: app.obsi.core.obsidian.BuiltProperty, v: String) {
             if (p.isTags()) {
                 tags.clear()
                 tags.addAll(NoteBuilder.splitList(v).map { it.removePrefix("#").trim('"') })
@@ -568,7 +576,7 @@ fun SaveSheet(
     }
 }
 
-private fun app.obsiread.obsidian.BuiltProperty.isTags() =
+private fun app.obsi.core.obsidian.BuiltProperty.isTags() =
     type == "multitext" && property.name.equals("tags", ignoreCase = true)
 
 private fun labelFor(kind: String) = when (kind) {

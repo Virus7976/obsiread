@@ -1,5 +1,13 @@
 package app.obsiread.ui
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import app.obsiread.data.Place
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -65,8 +73,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.obsiread.R
-import app.obsiread.data.Highlight
-import app.obsiread.data.HighlightColors
+import app.obsi.core.data.Highlight
+import app.obsi.core.data.HighlightColors
 import app.obsiread.data.Article
 import kotlinx.coroutines.launch
 
@@ -131,6 +139,14 @@ fun HighlightsScreen(onBack: () -> Unit) {
         shown.sortedWith((if (oldest) byTime else byTime.reversed()).thenBy { it.h.startSec })
     }
 
+    // Highlights from ObsiTube and Obsi Bible, when they are on this phone.
+    val others = rememberOtherHighlights()
+    var allApps by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+    val othersShown = remember(others, query, allApps, onlyNotes, tagSel, colors) {
+        if (!allApps || colors.isNotEmpty()) emptyList()
+        else others.matching(query).filter { (!onlyNotes || it.note.isNotBlank()) && tagSel.all { t -> t in it.tags } }
+    }
+
     // A new search or filter starts at the top.
     val list = rememberLazyListState()
     OnChanged("$query|$onlyNotes|$colors|$byVideo|$oldest|$tagSel") { list.scrollToItem(0) }
@@ -189,6 +205,9 @@ fun HighlightsScreen(onBack: () -> Unit) {
                         label = { Text(if (byVideo && oldest) "By article, oldest" else "By article") },
                     )
                 }
+                if (others.isNotEmpty()) item("apps") {
+                    FilterChip(selected = allApps, onClick = { allApps = !allApps }, label = { Text("All apps") })
+                }
                 item("notes") {
                     FilterChip(
                         selected = onlyNotes, onClick = { onlyNotes = !onlyNotes }, label = { Text("With notes") },
@@ -216,7 +235,7 @@ fun HighlightsScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
 
-            if (shown.isEmpty()) {
+            if (shown.isEmpty() && othersShown.isEmpty()) {
                 Text(
                     if (all.isEmpty()) "Hold a word in an article to highlight it. Everything you highlight or note shows up here."
                     else "Nothing matches. Clear the search or a filter.",
@@ -246,6 +265,7 @@ fun HighlightsScreen(onBack: () -> Unit) {
                 } else items(flat, key = { "h" + it.h.id }) { e ->
                     HighlightCard(e, tokens, showSource = !oneVideo, onOpen = { openAt(e) }, onCopy = { copy(e, it) }, onDelete = { delete(e) })
                 }
+                otherHighlights(othersShown)
             }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp))

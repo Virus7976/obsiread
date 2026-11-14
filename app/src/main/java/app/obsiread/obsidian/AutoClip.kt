@@ -1,8 +1,16 @@
 package app.obsiread.obsidian
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import app.obsiread.ObsiReadApp
-import app.obsiread.data.ClipMemo
-import app.obsiread.data.NoteName
+import app.obsi.core.data.ClipMemo
+import app.obsi.core.data.NoteName
 import app.obsiread.data.Markdown
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

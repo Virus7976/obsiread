@@ -1,9 +1,17 @@
 package app.obsiread
 
-import app.obsiread.data.Highlight
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
+import app.obsi.core.data.Highlight
 import app.obsiread.data.HitKind
 import app.obsiread.data.LibrarySearch
-import app.obsiread.data.Playlist
+import app.obsi.core.data.Playlist
 import app.obsiread.data.ReviewCard
 import app.obsiread.data.Reviews
 import app.obsiread.data.Article

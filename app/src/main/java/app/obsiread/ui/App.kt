@@ -1,5 +1,13 @@
 package app.obsiread.ui
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
@@ -77,6 +85,15 @@ fun AppRoot(app: ObsiReadApp, incomingLink: String?, onLinkConsumed: () -> Unit)
                     openReview = { if (stack.last() != Screen.Review) stack.add(Screen.Review) },
                     openHighlights = { if (stack.last() != Screen.Highlights) stack.add(Screen.Highlights) },
                 )
+            }
+
+            // An article another Obsi app asked to open.
+            val openItem by app.openItem.collectAsState()
+            androidx.compose.runtime.LaunchedEffect(openItem) {
+                val (id, at) = openItem ?: return@LaunchedEffect
+                app.openItem.value = null
+                if (at >= 0) app.pendingSeek.value = id to at
+                nav.openVideo(id)
             }
 
             // A page shared from a browser. It is read in the background and opens when it is ready,

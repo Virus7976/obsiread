@@ -1,11 +1,19 @@
 package app.obsiread.obsidian
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import android.net.Uri
 import android.widget.Toast
 import app.obsiread.ObsiReadApp
-import app.obsiread.data.ClipTemplate
-import app.obsiread.data.NoteRef
-import app.obsiread.data.VaultScanner
+import app.obsi.core.data.ClipTemplate
+import app.obsi.core.data.NoteRef
+import app.obsi.core.data.VaultScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

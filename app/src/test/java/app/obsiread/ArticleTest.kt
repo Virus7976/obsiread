@@ -1,10 +1,18 @@
 package app.obsiread
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import app.obsiread.data.AppSettings
 import app.obsiread.data.Article
 import app.obsiread.data.ArticleDoc
 import app.obsiread.data.Clipper
-import app.obsiread.data.Highlights
+import app.obsi.core.data.Highlights
 import app.obsiread.data.Markdown
 import app.obsiread.obsidian.ClipperImport
 import app.obsiread.obsidian.NoteBuilder

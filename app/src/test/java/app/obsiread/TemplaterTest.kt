@@ -1,8 +1,16 @@
 package app.obsiread
 
-import app.obsiread.data.TemplateProperty
-import app.obsiread.obsidian.Templater
-import app.obsiread.obsidian.VaultTemplate
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
+import app.obsi.core.data.TemplateProperty
+import app.obsi.core.obsidian.Templater
+import app.obsi.core.obsidian.VaultTemplate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

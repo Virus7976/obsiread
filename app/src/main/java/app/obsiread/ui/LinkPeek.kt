@@ -1,5 +1,13 @@
 package app.obsiread.ui
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -62,7 +70,7 @@ import coil3.toBitmap
 import coil3.request.allowHardware
 import app.obsiread.data.ArticleMeta
 import app.obsiread.data.Clipper
-import app.obsiread.obsidian.Template
+import app.obsi.core.obsidian.Template
 import app.obsiread.web.WebReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope

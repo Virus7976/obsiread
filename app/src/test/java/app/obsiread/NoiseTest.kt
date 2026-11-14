@@ -1,7 +1,15 @@
 package app.obsiread
 
-import app.obsiread.data.Cue
-import app.obsiread.data.TranscriptDoc
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
+import app.obsi.core.data.Cue
+import app.obsi.core.data.TranscriptDoc
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

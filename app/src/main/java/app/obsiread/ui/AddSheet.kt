@@ -1,5 +1,13 @@
 package app.obsiread.ui
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.clickable
@@ -60,7 +68,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.obsiread.data.Clipper
-import app.obsiread.data.Playlist
+import app.obsi.core.data.Playlist
 import app.obsiread.data.Article
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay

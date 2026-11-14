@@ -1,5 +1,13 @@
 package app.obsiread.ui
 
+import app.obsi.core.*
+import app.obsi.core.data.*
+import app.obsi.core.obsidian.*
+import app.obsi.core.ui.*
+import app.obsi.core.update.*
+import app.obsi.core.link.*
+import app.obsi.core.share.*
+
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -89,15 +97,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.obsiread.data.ClipTemplate
-import app.obsiread.data.TemplateProperty
-import app.obsiread.data.OmniKind
-import app.obsiread.data.VaultScanner
-import app.obsiread.obsidian.Sender
-import app.obsiread.obsidian.VaultTemplate
+import app.obsi.core.data.ClipTemplate
+import app.obsi.core.data.TemplateProperty
+import app.obsi.core.data.OmniKind
+import app.obsi.core.data.VaultScanner
+import app.obsi.core.obsidian.Sender
+import app.obsi.core.obsidian.VaultTemplate
 import app.obsiread.obsidian.ClipperExport
-import app.obsiread.update.AdbInstaller
-import app.obsiread.update.ShizukuInstaller
+import app.obsi.core.update.AdbInstaller
+import app.obsi.core.update.ShizukuInstaller
 import app.obsiread.obsidian.ClipperImport
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -238,6 +246,8 @@ fun SettingsScreen(onBack: () -> Unit, onEditTemplate: (String) -> Unit) {
                     Text("Nothing matches \"$query\"", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+
+            if (query.isBlank() && page == null) item("obsi-apps") { ObsiAppsSection() }
 
             // ---------- the menu ----------
             if (query.isBlank() && page == null) menu.forEach { e ->
@@ -685,7 +695,7 @@ private object SettingsKeys {
 // ---------- palette maker ----------
 
 @Composable
-private fun PaletteMaker(onDismiss: () -> Unit, onSave: (app.obsiread.data.CustomPalette) -> Unit) {
+private fun PaletteMaker(onDismiss: () -> Unit, onSave: (app.obsi.core.data.CustomPalette) -> Unit) {
     var name by remember { mutableStateOf("") }
     var seed by remember { mutableStateOf(0xFF3DDC97L) }
     var hex by remember { mutableStateOf("3DDC97") }
@@ -733,7 +743,7 @@ private fun PaletteMaker(onDismiss: () -> Unit, onSave: (app.obsiread.data.Custo
         },
         confirmButton = {
             TextButton(onClick = {
-                onSave(app.obsiread.data.CustomPalette(UUID.randomUUID().toString().take(8), name.ifBlank { "Mine" }, seed, style))
+                onSave(app.obsi.core.data.CustomPalette(UUID.randomUUID().toString().take(8), name.ifBlank { "Mine" }, seed, style))
             }) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
