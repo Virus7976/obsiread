@@ -17,8 +17,8 @@ import app.obsi.core.data.OmniKind
 import app.obsiread.data.Article
 import app.obsi.core.data.VaultIndex
 import app.obsiread.data.ArticleMeta
-import app.obsiread.obsidian.ClipperExport
-import app.obsiread.obsidian.ClipperImport
+import app.obsi.core.obsidian.ClipperExport
+import app.obsi.core.obsidian.ClipperImport
 import app.obsiread.obsidian.NoteBuilder
 import app.obsiread.obsidian.Updater
 import java.io.File

@@ -119,7 +119,7 @@ fun AppRoot(app: ObsiReadApp, incomingLink: String?, onLinkConsumed: () -> Unit)
             // Self-healing: when a new release is found (for example a playback fix), say so right away.
             val update by app.updates.state.collectAsState()
             var later by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
-            (update as? app.obsiread.update.UpdateState.Available)?.info?.let { info ->
+            (update as? app.obsi.core.update.UpdateState.Available)?.info?.let { info ->
                 if (later != info.version) {
                     androidx.compose.material3.AlertDialog(
                         onDismissRequest = { later = info.version },

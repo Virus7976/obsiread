@@ -14,7 +14,7 @@ import app.obsiread.data.ArticleDoc
 import app.obsiread.data.Clipper
 import app.obsi.core.data.Highlights
 import app.obsiread.data.Markdown
-import app.obsiread.obsidian.ClipperImport
+import app.obsi.core.obsidian.ClipperImport
 import app.obsiread.obsidian.NoteBuilder
 import java.io.File
 import org.junit.Assert.assertEquals

@@ -104,7 +104,7 @@
             </intent-filter>
         </activity-alias>
 
-        <receiver android:name=".update.InstallReceiver" android:exported="false" />
+        <receiver android:name="app.obsi.core.update.InstallReceiver" android:exported="false" />
         <receiver android:name=".ReviewReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

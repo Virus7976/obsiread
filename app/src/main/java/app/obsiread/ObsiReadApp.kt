@@ -16,8 +16,8 @@ import app.obsi.core.data.Playlists
 import app.obsi.core.data.PlayQueue
 import app.obsi.core.data.SettingsStore
 import app.obsi.core.data.VaultStore
-import app.obsiread.obsidian.ClipperImport
-import app.obsiread.update.SelfUpdate
+import app.obsi.core.obsidian.ClipperImport
+import app.obsi.core.update.SelfUpdate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -45,7 +45,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         private set
     lateinit var library: Library
         private set
-    lateinit var updates: SelfUpdate
+    override lateinit var updates: SelfUpdate
         private set
     override lateinit var vaults: VaultStore
         private set
@@ -154,6 +154,9 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         val lines = library.loadBody(v.meta.id)?.let { app.obsiread.data.Markdown.from(it) }.orEmpty()
         return app.obsiread.obsidian.NoteBuilder.variables(v, lines, s)
     }
+
+    @androidx.compose.runtime.Composable
+    override fun IconPicker() = app.obsiread.ui.AppIconPicker()
 
     /** Every highlight, for the other Obsi apps to show. */
     private fun sharedHighlights(): List<app.obsi.core.share.SharedHighlight> = library.articles.value.flatMap { a ->
