@@ -12,7 +12,7 @@ import app.obsi.core.data.Highlight
 import app.obsiread.data.HitKind
 import app.obsiread.data.LibrarySearch
 import app.obsi.core.data.Playlist
-import app.obsiread.data.ReviewCard
+import app.obsi.core.data.ReviewCard
 import app.obsiread.data.Reviews
 import app.obsiread.data.Article
 import app.obsiread.data.ArticleMeta

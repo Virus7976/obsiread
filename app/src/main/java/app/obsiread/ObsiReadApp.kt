@@ -79,6 +79,8 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         app.obsi.core.Brand.init(app.obsi.core.ObsiApp.Read)
         app.obsi.core.share.SharedHighlights.source = ::sharedHighlights
         app.obsi.core.share.SharedSetup.source = { app.obsi.core.share.SharedSetup.of(settings.value) }
+        app.obsi.core.share.SharedReview.due = { reviews.due(library.articles.value).map { shared(it.video, it.highlight) } }
+        app.obsi.core.share.SharedReview.act = { key, action -> reviews.act(key, action) }
         settings = SettingsStore(this)
         vaults = VaultStore(this) { settings.value.vaultFolders }
         updates = SelfUpdate(this, settings)
@@ -160,15 +162,14 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
     override fun IconPicker() = app.obsiread.ui.AppIconPicker()
 
     /** Every highlight, for the other Obsi apps to show. */
-    private fun sharedHighlights(): List<app.obsi.core.share.SharedHighlight> = library.articles.value.flatMap { a ->
-        a.highlights.map { h ->
-            app.obsi.core.share.SharedHighlight(
-                app = app.obsi.core.ObsiApp.Read, itemId = a.meta.id, itemTitle = a.meta.title, text = h.text, note = h.note,
-                color = app.obsi.core.data.HighlightColors.getOrNull(h.color)?.ui ?: 0xFFF2C14E, at = h.startSec.toString(),
-                place = a.meta.siteName, created = h.createdAt.takeIf { it > 0 } ?: a.addedAt, tags = h.tags,
-            )
-        }
-    }
+    private fun sharedHighlights(): List<app.obsi.core.share.SharedHighlight> =
+        library.articles.value.flatMap { a -> a.highlights.map { h -> shared(a, h) } }
+
+    private fun shared(a: Article, h: app.obsi.core.data.Highlight) = app.obsi.core.share.SharedHighlight(
+        app = app.obsi.core.ObsiApp.Read, itemId = a.meta.id, itemTitle = a.meta.title, text = h.text, note = h.note,
+        color = app.obsi.core.data.HighlightColors.getOrNull(h.color)?.ui ?: 0xFFF2C14E, at = h.startSec.toString(),
+        place = a.meta.siteName, created = h.createdAt.takeIf { it > 0 } ?: a.addedAt, tags = h.tags, key = h.id,
+    )
 
     /** First launch: load the clipper templates that ship inside the app. */
     private fun seedFromBundledClipperSettings() {
