@@ -78,6 +78,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         super.onCreate()
         app.obsi.core.Brand.init(app.obsi.core.ObsiApp.Read)
         app.obsi.core.share.SharedHighlights.source = ::sharedHighlights
+        app.obsi.core.share.SharedSetup.source = { app.obsi.core.share.SharedSetup.of(settings.value) }
         settings = SettingsStore(this)
         vaults = VaultStore(this) { settings.value.vaultFolders }
         updates = SelfUpdate(this, settings)
