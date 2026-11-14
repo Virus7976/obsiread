@@ -175,8 +175,8 @@ class Playlists(context: Context) : JsonFileStore<List<Playlist>>(File(context.f
     }
 
     /** The built in "Watch later" playlist. Made the first time it is used. Videos leave it when watched. */
-    fun watchLater(): Playlist = get(WATCH_LATER)
-        ?: Playlist(WATCH_LATER, "Watch later", "", emptyList(), System.currentTimeMillis(), removeWhenWatched = true).also { put(it) }
+    fun watchLater(): Playlist = get(WATCH_LATER)?.let { if (it.title == "Watch later") it.copy(title = "Read later").also { p -> put(p) } else it }
+        ?: Playlist(WATCH_LATER, "Read later", "", emptyList(), System.currentTimeMillis(), removeWhenWatched = true).also { put(it) }
 
     fun setRemoveWhenWatched(id: String, on: Boolean) {
         _state.update { list -> list.map { if (it.id == id) it.copy(removeWhenWatched = on) else it } }

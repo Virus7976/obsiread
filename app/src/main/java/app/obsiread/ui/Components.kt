@@ -76,8 +76,8 @@ fun androidx.compose.foundation.layout.BoxScope.StatusBarScrim() {
     )
 }
 
-/** "1 video", "3 videos". */
-fun videoCount(n: Int) = if (n == 1) "1 video" else "$n videos"
+/** "1 article", "3 articles". */
+fun videoCount(n: Int) = if (n == 1) "1 article" else "$n articles"
 
 /** Runs [block] when [key] really changes. A screen that comes back with its saved state does not count. */
 @Composable

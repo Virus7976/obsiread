@@ -212,8 +212,8 @@ fun SaveSheet(
                         val saved = withContext(Dispatchers.IO) { Sender.saveFile(ctx, note, folderUri) }
                         if (saved.ok) {
                             app.vaults.refresh(key, force = true)
-                            Sender.openNote(ctx, note.vault, saved.path.ifBlank { note.path })
-                            SendResult(true, "Saved to Obsidian.", saved.path)
+                            Sender.openVault(ctx, note.vault)
+                            SendResult(true, "Saved to ${saved.path.ifBlank { note.path }}.md", saved.path)
                         } else saved
                     } else Sender.addToObsidian(ctx, note)
                 }
@@ -288,7 +288,9 @@ fun SaveSheet(
 
         // The boxes are on the sheet. The popup is only for one still empty at save time.
         fun go(kind: String) {
-            askEmpty = note.properties.filter { it.property.id in askIds && it.value.isBlank() }.map { it.property.id }.toSet()
+            // Every field you fill by hand, and the tags, is asked for while still empty.
+            // A note saved without them is hard to find again.
+            askEmpty = note.properties.filter { (it.property.id in mineIds || it.isTags()) && it.value.isBlank() }.map { it.property.id }.toSet()
             if (askEmpty.isNotEmpty()) askFor = kind else finish(kind)
         }
 
@@ -314,7 +316,7 @@ fun SaveSheet(
             if (existing != null) {
                 Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("You already saved this video", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                        Text("You already saved this article", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
                         Text(
                             existing.path,
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer,

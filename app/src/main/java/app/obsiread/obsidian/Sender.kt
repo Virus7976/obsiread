@@ -74,6 +74,12 @@ object Sender {
         context, "obsidian://open?vault=${Uri.encode(vault)}&file=${Uri.encode(path.removeSuffix(".md"))}",
     )
 
+    /**
+     * Opens the vault only. Used right after ObsiRead writes a note: Obsidian has not seen the new
+     * file yet, and opening it by name makes Obsidian create an empty note over it.
+     */
+    fun openVault(context: Context, vault: String): Boolean = open(context, "obsidian://open?vault=${Uri.encode(vault)}")
+
     /** Opens Obsidian's own search with a query filled in. */
     fun openSearch(context: Context, vault: String, query: String): Boolean = open(
         context, "obsidian://search?vault=${Uri.encode(vault)}&query=${Uri.encode(query)}",

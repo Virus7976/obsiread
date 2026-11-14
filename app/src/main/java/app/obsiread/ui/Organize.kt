@@ -231,7 +231,7 @@ fun VideoActionsSheet(videoId: String, inPlaylist: Boolean = false, pending: Art
 
             // Most used first: put it on a playlist. Everything below opens with a swipe up.
             if (inLib) GroupCard {
-                FieldBlock("Add to a playlist") {
+                FieldBlock("Add to a list") {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         playlists.forEach { p ->
                             val inIt = videoId in p.videoIds
@@ -243,7 +243,7 @@ fun VideoActionsSheet(videoId: String, inPlaylist: Boolean = false, pending: Art
                         }
                         androidx.compose.material3.AssistChip(
                             onClick = { newPlaylist = true },
-                            label = { Text("New playlist") },
+                            label = { Text("New list") },
                             leadingIcon = { Icon(Icons.Rounded.Add, null, Modifier.size(18.dp)) },
                         )
                     }
@@ -343,7 +343,7 @@ fun VideoActionsSheet(videoId: String, inPlaylist: Boolean = false, pending: Art
 fun RemoveVideoDialog(onKeep: () -> Unit, onRemove: () -> Unit) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onKeep,
-        title = { Text("Remove this video?") },
+        title = { Text("Remove this article?") },
         text = { Text("Its highlights and saved audio are removed from this phone. Your Obsidian note stays.") },
         confirmButton = { TextButton(onClick = onRemove) { Text("Remove") } },
         dismissButton = { TextButton(onClick = onKeep) { Text("Keep") } },
@@ -480,7 +480,7 @@ fun LazyListScope.playlistsTab(
         if (playlists.isEmpty()) {
             item("pl-empty") {
                 Text(
-                    "No playlists yet. Tap New playlist, or tap Add and paste a YouTube playlist link.",
+                    "No lists yet. Tap New list to make one.",
                     Modifier.padding(24.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -540,7 +540,7 @@ private fun PlaylistHeader(p: Playlist, onBack: () -> Unit) {
         ) {
             Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Remove articles as I finish them", style = MaterialTheme.typography.bodyLarge)
-                Text("When you finish one, it leaves this playlist.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("When you finish one, it leaves this list.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             androidx.compose.material3.Switch(checked = p.removeWhenWatched, onCheckedChange = { app.playlists.setRemoveWhenWatched(p.id, it) })
         }
@@ -548,14 +548,14 @@ private fun PlaylistHeader(p: Playlist, onBack: () -> Unit) {
             FilledTonalButton(onClick = { app.queue.add(*p.videoIds.toTypedArray()) }, shapes = ButtonDefaults.shapes()) {
                 Icon(Icons.Rounded.QueueMusic, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Add to Up next")
             }
-            TextButton(onClick = { confirm = true }) { Text("Delete playlist") }
+            TextButton(onClick = { confirm = true }) { Text("Delete list") }
         }
     }
     if (confirm) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { confirm = false },
-            title = { Text("Delete this playlist?") },
-            text = { Text("Videos with highlights stay in your library. The others are removed.") },
+            title = { Text("Delete this list?") },
+            text = { Text("Articles with highlights stay in your library. The others are removed.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirm = false
@@ -662,7 +662,7 @@ private fun videoNote(application: app.obsiread.ObsiReadApp, v: Article): Pair<S
 fun openVideoNote(ctx: android.content.Context, application: app.obsiread.ObsiReadApp, v: Article): Boolean {
     val found = videoNote(application, v)
     if (found == null) {
-        android.widget.Toast.makeText(ctx, "No note yet. Clip this video first.", android.widget.Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(ctx, "No note yet. Clip this article first.", android.widget.Toast.LENGTH_SHORT).show()
         return false
     }
     val (vault, path) = found
@@ -686,11 +686,11 @@ fun NewPlaylistDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New playlist") },
+        title = { Text("New list") },
         text = {
             OutlinedTextField(
                 value = name, onValueChange = { name = it }, singleLine = true, shape = RoundedCornerShape(18.dp),
-                placeholder = { Text("For example: Watch this week") },
+                placeholder = { Text("For example: Read this week") },
             )
         },
         confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { onCreate(name.trim()) }) { Text("Create") } },

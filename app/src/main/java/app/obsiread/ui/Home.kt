@@ -286,7 +286,7 @@ fun HomeScreen(
                     query, { query = it },
                     when {
                         showQueue -> "Search the queue"
-                        openPlaylist != null -> "Search this playlist"
+                        openPlaylist != null -> "Search this list"
                         else -> "Search this list"
                     },
                 )
@@ -317,7 +317,7 @@ fun HomeScreen(
                 }
             }
             if (browsing && playlists.isNotEmpty()) {
-                item("pl-label") { SectionHeader("Playlists", playlists.size, always = true) { page = "playlists" } }
+                item("pl-label") { SectionHeader("Lists", playlists.size, always = true) { page = "playlists" } }
                 item("pl-row") {
                     LazyRow(contentPadding = rowPad, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(playlists.take(12), key = { "pc" + it.id }) { p -> PlaylistCard(p, videos) { openPlaylist = p.id } }
@@ -325,7 +325,7 @@ fun HomeScreen(
                 }
             }
             if (showLibrary && !inPlaylist && page != null) {
-                val pageTitle = when (page) { "playlists" -> "Playlists"; "resume" -> "Pick up where you left off"; else -> "Pinned" }
+                val pageTitle = when (page) { "playlists" -> "Lists"; "resume" -> "Pick up where you left off"; else -> "Pinned" }
                 val pageCount = when (page) { "playlists" -> playlists.size; "resume" -> resumeAll.size; else -> pinned.size }
                 item("page-head") { BackRow(pageTitle, { page = null }, "$pageCount") }
                 if (page == "playlists") {
@@ -333,7 +333,7 @@ fun HomeScreen(
                         TextButton(onClick = { newPlaylistOpen = true }, modifier = Modifier.padding(horizontal = 10.dp)) {
                             Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("New playlist")
+                            Text("New list")
                         }
                     }
                     playlistsTab(

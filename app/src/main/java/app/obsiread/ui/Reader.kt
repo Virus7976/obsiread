@@ -697,7 +697,7 @@ private fun HighlightsSheet(video: Article, onDismiss: () -> Unit, onJump: (High
                 )
                 if (video.highlights.isEmpty()) {
                     Text(
-                        "Hold a word in the transcript. Drag the handles to take more, then pick a colour.",
+                        "Hold a word in the article. Drag the handles to take more, then pick a colour.",
                         Modifier.padding(horizontal = 24.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -913,7 +913,7 @@ private fun FindBar(query: String, count: Int, at: Int, onQuery: (String) -> Uni
             onValueChange = onQuery,
             modifier = Modifier.weight(1f).focusRequester(focus),
             singleLine = true,
-            placeholder = { Text("Find in this video") },
+            placeholder = { Text("Find in this article") },
             shape = RoundedCornerShape(50),
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { onStep(1) }),

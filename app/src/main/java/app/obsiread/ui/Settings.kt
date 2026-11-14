@@ -357,7 +357,7 @@ fun SettingsScreen(onBack: () -> Unit, onEditTemplate: (String) -> Unit) {
                 SwitchRow("Always show highlights", null, s.alwaysShowHighlights) { v -> set { it.copy(alwaysShowHighlights = v) } }
                 SwitchRow(
                     "Highlights replace the content",
-                    "When on, the note body is your highlights. When off, it is the transcript.",
+                    "When on, the note body is your highlights. When off, it is the article.",
                     s.highlightBehavior == "replace-content",
                 ) { v -> set { it.copy(highlightBehavior = if (v) "replace-content" else "keep-content") } }
                 Label("Holding a word selects")
@@ -580,10 +580,6 @@ fun SettingsScreen(onBack: () -> Unit, onEditTemplate: (String) -> Unit) {
                             }
                         }
                     }
-                    ListRow(
-                        "Save by itself when I finish an article", "Only if it has highlights. It never opens Obsidian.",
-                        onClick = { set { it.copy(autoClip = !it.autoClip) } },
-                    ) { Switch(checked = s.autoClip, onCheckedChange = { v -> set { it.copy(autoClip = v) } }) }
                     ListRow(
                         "Fill the sheet from my note", "When the article is already in your vault, start from what that note has.",
                         onClick = { set { it.copy(prefillExisting = !it.prefillExisting) } },

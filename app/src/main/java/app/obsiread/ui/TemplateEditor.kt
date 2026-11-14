@@ -65,7 +65,7 @@ private val behaviors = listOf(
 )
 
 private val variablesHelp =
-    "Video data: " + (VideoData.fields.map { it.key } + "content").joinToString(" ") { "{{$it}}" } +
+    "Article data: " + (VideoData.fields.map { it.key } + "content").joinToString(" ") { "{{$it}}" } +
         "\n\nFilters: split join wikilink link date:\"YYYY-MM-DD\" lower upper capitalize title trim kebab snake camel " +
         "safe_name blockquote list first last default:\"x\" replace:\"a\":\"b\""
 

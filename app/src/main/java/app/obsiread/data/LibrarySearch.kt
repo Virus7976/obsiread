@@ -117,7 +117,7 @@ object LibrarySearch {
                 if (f == null) { ok = false; break }
                 total += f.score * 2.5
             }
-            if (ok) out += Hit(HitKind.Playlist, p.title, "${p.videoIds.size} video${if (p.videoIds.size == 1) "" else "s"}", score = total, ref = p.id)
+            if (ok) out += Hit(HitKind.Playlist, p.title, "${p.videoIds.size} article${if (p.videoIds.size == 1) "" else "s"}", score = total, ref = p.id)
         }
 
         return out.sortedWith(compareByDescending<Hit> { it.score }.thenBy { it.title.lowercase() }).take(limit)

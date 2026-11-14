@@ -117,7 +117,7 @@ fun LibrarySearchSheet(onDismiss: () -> Unit, onOpenPlaylist: (String) -> Unit) 
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Rounded.Close, "Clear") } },
-                placeholder = { Text("Search videos, highlights, notes", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                placeholder = { Text("Search articles, highlights, notes", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 shape = MaterialTheme.shapes.extraLarge,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { shown.firstOrNull()?.let { open(it) } }),
@@ -160,9 +160,9 @@ fun LibrarySearchSheet(onDismiss: () -> Unit, onOpenPlaylist: (String) -> Unit) 
 }
 
 private fun kindLabel(k: HitKind) = when (k) {
-    HitKind.Video -> "Videos"
+    HitKind.Video -> "Articles"
     HitKind.Highlight -> "Highlights"
-    HitKind.Playlist -> "Playlists"
+    HitKind.Playlist -> "Lists"
     HitKind.Channel -> "Channels"
 }
 

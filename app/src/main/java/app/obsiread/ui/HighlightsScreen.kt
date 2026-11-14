@@ -172,7 +172,7 @@ fun HighlightsScreen(onBack: () -> Unit) {
                     )
                 }
             }
-            SearchField(query, { query = it }, "Search words, notes and videos")
+            SearchField(query, { query = it }, "Search words, notes and articles")
 
             // How to read, then what to keep. One line, scrolls sideways.
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -186,7 +186,7 @@ fun HighlightsScreen(onBack: () -> Unit) {
                 if (!oneVideo) item("v") {
                     FilterChip(
                         selected = byVideo, onClick = { if (byVideo) oldest = !oldest else byVideo = true },
-                        label = { Text(if (byVideo && oldest) "By video, oldest" else "By video") },
+                        label = { Text(if (byVideo && oldest) "By article, oldest" else "By article") },
                     )
                 }
                 item("notes") {
@@ -218,7 +218,7 @@ fun HighlightsScreen(onBack: () -> Unit) {
 
             if (shown.isEmpty()) {
                 Text(
-                    if (all.isEmpty()) "Hold a word in a transcript to highlight it. Everything you highlight or note shows up here."
+                    if (all.isEmpty()) "Hold a word in an article to highlight it. Everything you highlight or note shows up here."
                     else "Nothing matches. Clear the search or a filter.",
                     Modifier.padding(horizontal = 28.dp, vertical = 32.dp),
                     style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant,

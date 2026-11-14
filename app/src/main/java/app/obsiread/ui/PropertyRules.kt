@@ -29,7 +29,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Numbers
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.SmartDisplay
+import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -197,7 +197,7 @@ fun PropertyRuleSheet(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
                     PropertyRule.Ask to "Ask me",
-                    PropertyRule.Data to "Video data",
+                    PropertyRule.Data to "Article data",
                     PropertyRule.Fixed to "Always the same",
                     PropertyRule.Empty to "Leave empty",
                 ).filter { it.first != PropertyRule.Data || p.type != "checkbox" }.forEach { (r, label) ->
@@ -299,7 +299,7 @@ fun TypedField(
 ) {
     var pickData by remember { mutableStateOf(false) }
     val dataIcon: (@Composable () -> Unit)? = if (dataButton && VideoData.forType(type).isNotEmpty()) {
-        { IconButton(onClick = { pickData = true }) { Icon(Icons.Rounded.SmartDisplay, "Use video data") } }
+        { IconButton(onClick = { pickData = true }) { Icon(Icons.AutoMirrored.Rounded.Article, "Use article data") } }
     } else null
     Column {
         when (type) {
@@ -318,7 +318,7 @@ fun TypedField(
             Column(
                 Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 16.dp),
             ) {
-                Text("Video data", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+                Text("Article data", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
                 DataList(type, vars, "") { f ->
                     val piece = insert(f)
                     onChange(
@@ -458,7 +458,7 @@ private fun ListField(label: String, value: String, vault: String?, dataIcon: (@
     }
 }
 
-/** Opens after the save button, for the properties marked Ask me. Swiping it away keeps what you typed. */
+/** Opens after the save button, for the fields still empty that you fill by hand. Swiping it away keeps what you typed. */
 @Composable
 fun AskSheet(
     fields: List<BuiltProperty>,
