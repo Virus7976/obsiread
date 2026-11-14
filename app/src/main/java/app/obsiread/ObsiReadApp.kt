@@ -12,9 +12,9 @@ import android.app.Application
 import app.obsiread.data.Article
 import app.obsiread.data.Clipper
 import app.obsiread.data.Library
-import app.obsiread.data.Playlists
-import app.obsiread.data.PlayQueue
-import app.obsiread.data.SettingsStore
+import app.obsi.core.data.Playlists
+import app.obsi.core.data.PlayQueue
+import app.obsi.core.data.SettingsStore
 import app.obsi.core.data.VaultStore
 import app.obsiread.obsidian.ClipperImport
 import app.obsiread.update.SelfUpdate
@@ -41,7 +41,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
             .build()
     }
 
-    lateinit var settings: SettingsStore
+    override lateinit var settings: SettingsStore
         private set
     lateinit var library: Library
         private set
@@ -147,6 +147,12 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
     fun setDone(id: String, done: Boolean) {
         if (done) { library.edit(id) { if (it.done) it else it.copy(doneAt = System.currentTimeMillis()) }; queue.remove(id) }
         else library.edit(id) { it.copy(doneAt = 0L) }
+    }
+
+    override fun sampleVariables(s: app.obsi.core.data.AppSettings): Map<String, String> {
+        val v = library.articles.value.maxByOrNull { maxOf(it.playedAt, it.updatedAt) } ?: return emptyMap()
+        val lines = library.loadBody(v.meta.id)?.let { app.obsiread.data.Markdown.from(it) }.orEmpty()
+        return app.obsiread.obsidian.NoteBuilder.variables(v, lines, s)
     }
 
     /** Every highlight, for the other Obsi apps to show. */

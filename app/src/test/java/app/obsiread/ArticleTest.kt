@@ -8,7 +8,7 @@ import app.obsi.core.update.*
 import app.obsi.core.link.*
 import app.obsi.core.share.*
 
-import app.obsiread.data.AppSettings
+import app.obsi.core.data.AppSettings
 import app.obsiread.data.Article
 import app.obsiread.data.ArticleDoc
 import app.obsiread.data.Clipper

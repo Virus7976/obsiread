@@ -1,4 +1,5 @@
 package app.obsiread.ui
+import app.obsi.core.R as CoreR
 
 import app.obsi.core.*
 import app.obsi.core.data.*
@@ -67,7 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.res.ResourcesCompat
 import app.obsiread.R
-import app.obsiread.data.AppSettings
+import app.obsi.core.data.AppSettings
 
 /** The reader's fonts: id and the name shown. */
 val ReaderFonts = listOf(
@@ -81,12 +82,12 @@ val ReaderFonts = listOf(
 /** The typeface for a reader font, at a weight from 100 to 900. Weight needs Android 9 or newer. */
 fun readerTypeface(ctx: Context, s: AppSettings): Typeface? {
     val base = when (s.readerFont) {
-        "sans" -> ResourcesCompat.getFont(ctx, R.font.atkinson_regular)
+        "sans" -> ResourcesCompat.getFont(ctx, CoreR.font.atkinson_regular)
         "system" -> Typeface.DEFAULT
         "systemserif" -> Typeface.SERIF
         "mono" -> Typeface.MONOSPACE
-        "custom" -> customTypeface(s.customFontPath) ?: ResourcesCompat.getFont(ctx, R.font.newsreader)
-        else -> ResourcesCompat.getFont(ctx, R.font.newsreader)
+        "custom" -> customTypeface(s.customFontPath) ?: ResourcesCompat.getFont(ctx, CoreR.font.newsreader)
+        else -> ResourcesCompat.getFont(ctx, CoreR.font.newsreader)
     }
     return if (s.fontWeight != 400 && Build.VERSION.SDK_INT >= 28 && base != null) Typeface.create(base, s.fontWeight, false) else base
 }

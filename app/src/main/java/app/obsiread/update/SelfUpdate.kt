@@ -18,7 +18,7 @@ import android.os.Build
 import android.provider.Settings
 import app.obsiread.BuildConfig
 import app.obsiread.ObsiReadApp
-import app.obsiread.data.SettingsStore
+import app.obsi.core.data.SettingsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

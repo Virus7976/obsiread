@@ -61,15 +61,11 @@ fun ColorScheme.withReader(p: ReaderPalette): ColorScheme {
     )
 }
 
+
 /**
  * Wraps the reader in its own colours when a reader theme is picked. The status bar icons turn dark on a
  * light page and light on a dark one.
  */
-/** The status bar icon colour a reader theme asks for: dark icons on a light page. Null means the app decides. */
-object BarIcons {
-    var light by androidx.compose.runtime.mutableStateOf<Boolean?>(null)
-}
-
 @Composable
 fun ReaderTheme(id: String, content: @Composable () -> Unit) {
     // The same layout every time, with or without a palette. A different shape would reset the screen,
