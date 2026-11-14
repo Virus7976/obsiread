@@ -807,6 +807,26 @@ class TranscriptView(context: Context) : ScrollView(context) {
         return (scrollY.toFloat() / range).coerceIn(0f, 1f)
     }
 
+    /** Each paragraph as plain text, for Listen. */
+    fun paragraphTexts(): List<String> {
+        val d = doc ?: return emptyList()
+        return d.paras.map { d.text.substring(it.charStart.coerceIn(0, d.text.length), it.charEnd.coerceIn(0, d.text.length)) }
+    }
+
+    /** The paragraph at the top of the view. */
+    fun paraAtTop(): Int {
+        val d = doc ?: return 0
+        val w = firstVisibleWord()
+        if (w < 0) return 0
+        return d.paras.indexOfFirst { w <= it.lastWord }.coerceAtLeast(0)
+    }
+
+    /** Glides to paragraph [i], so the page follows the voice. */
+    fun followPara(i: Int) {
+        val p = doc?.paras?.getOrNull(i) ?: return
+        if (p.firstWord >= 0) scrollToWord(p.firstWord)
+    }
+
     /** Puts the line of [word] at the top of the view at once, with no glide. Used to open where you left off. */
     fun jumpToWord(word: Int) {
         val d = doc ?: return

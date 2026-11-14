@@ -55,6 +55,9 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         private set
     lateinit var reviews: app.obsiread.data.Reviews
         private set
+    /** The sites you follow. */
+    lateinit var feeds: app.obsiread.data.FeedStore
+        private set
 
     override val recentTags: kotlinx.coroutines.flow.StateFlow<List<String>> by lazy {
         settings.state.map { it.recentTags }.stateIn(appScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, settings.value.recentTags)
@@ -86,6 +89,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         updates = SelfUpdate(this, settings)
         library = Library(this)
         reviews = app.obsiread.data.Reviews(this)
+        feeds = app.obsiread.data.FeedStore(this)
         playlists = Playlists(this)
         queue = PlayQueue(settings)
         appScope.launch {

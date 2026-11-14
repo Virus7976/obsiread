@@ -104,6 +104,23 @@ fun AddSheet(initial: String?, onDismiss: () -> Unit, onPlaylist: (String) -> Un
         }
     }
 
+    // Follow: new posts from this site show on Home.
+    fun follow(raw: String) {
+        val link = Clipper.findUrl(raw.trim()) ?: raw.trim().takeIf { it.contains('.') && !it.contains(' ') }?.let { "https://$it" }
+        if (link == null) { error = "That is not a web address."; return }
+        error = null
+        busy = true
+        scope.launch {
+            runCatching { app.feeds.follow(link) }
+                .onSuccess { f ->
+                    android.widget.Toast.makeText(ctx, "Following ${f.title}", android.widget.Toast.LENGTH_SHORT).show()
+                    onDismiss()
+                }
+                .onFailure { error = it.message ?: "That page has no feed." }
+            busy = false
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (!initial.isNullOrBlank()) go(initial)
         else { sheet.awaitOpen(); runCatching { focus.requestFocus() } }
@@ -141,6 +158,7 @@ fun AddSheet(initial: String?, onDismiss: () -> Unit, onPlaylist: (String) -> Un
                     Text("Paste and add")
                 }
                 if (input.isNotBlank() && !busy) Button(onClick = { go(input) }, shapes = ButtonDefaults.shapes()) { Text("Add") }
+                if (input.isNotBlank() && !busy) androidx.compose.material3.OutlinedButton(onClick = { follow(input) }, shapes = ButtonDefaults.shapes()) { Text("Follow") }
             }
             if (busy) Row(verticalAlignment = Alignment.CenterVertically) {
                 LoadingIndicator(Modifier.size(40.dp))

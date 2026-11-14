@@ -108,6 +108,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.obsi.core.data.Playlist
 import app.obsiread.data.Article
+import app.obsiread.data.FeedStore
 import app.obsiread.data.ArticleMeta
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -128,6 +129,10 @@ fun HomeScreen(
     val videos by app.library.articles.collectAsState()
     val nowId: String? = null
     val clipping by app.clipping.collectAsState()
+    // New posts from the sites you follow.
+    val feedState by app.feeds.state.collectAsState()
+    val fresh = remember(feedState, videos) { FeedStore.fresh(feedState, videos.map { it.meta.id }.toSet()) }
+    LaunchedEffect(Unit) { app.feeds.check() }
 
     var addOpen by remember { mutableStateOf(false) }
     var searchOpen by remember { mutableStateOf(false) }
@@ -178,6 +183,14 @@ fun HomeScreen(
     var refreshing by remember { mutableStateOf(false) }
     val pullState = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
     val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
+    // A post from a feed: read it into the library, then open it.
+    fun openFeedItem(link: String) {
+        scope.launch {
+            runCatching { app.addFromUrl(link) }
+                .onSuccess { id -> app.feeds.hide(link); onOpen(id) }
+                .onFailure { snackbar.showSnackbar(it.message ?: "Could not read that page.") }
+        }
+    }
     // Every way of marking a video lands here, so each one can be undone the same way.
     fun toggleDone(id: String) {
         val was = videos.firstOrNull { it.meta.id == id }?.done ?: return
@@ -196,6 +209,7 @@ fun HomeScreen(
                 refreshing = true
                 settings.vaultFolders.keys.forEach { app.vaults.refresh(it, force = true) }
                 app.updates.check()
+                scope.launch { app.feeds.check(0) }
                 scope.launch { kotlinx.coroutines.delay(900); refreshing = false }
             },
             state = pullState,
@@ -323,6 +337,12 @@ fun HomeScreen(
                     }
                 }
             }
+            if (browsing && fresh.isNotEmpty()) {
+                item("feed-label") { SectionHeader("New from your feeds", fresh.size, always = true, limit = 3) { page = "feeds" } }
+                items(fresh.take(3), key = { "fd" + it.item.link }) { f ->
+                    FeedRow(f, { openFeedItem(f.item.link) }, { app.feeds.hide(f.item.link) })
+                }
+            }
             if (browsing && playlists.isNotEmpty()) {
                 item("pl-label") { SectionHeader("Lists", playlists.size, always = true) { page = "playlists" } }
                 item("pl-row") {
@@ -332,10 +352,18 @@ fun HomeScreen(
                 }
             }
             if (showLibrary && !inPlaylist && page != null) {
-                val pageTitle = when (page) { "playlists" -> "Lists"; "resume" -> "Pick up where you left off"; else -> "Pinned" }
-                val pageCount = when (page) { "playlists" -> playlists.size; "resume" -> resumeAll.size; else -> pinned.size }
+                val pageTitle = when (page) { "playlists" -> "Lists"; "resume" -> "Pick up where you left off"; "feeds" -> "Feeds"; else -> "Pinned" }
+                val pageCount = when (page) { "playlists" -> playlists.size; "resume" -> resumeAll.size; "feeds" -> fresh.size; else -> pinned.size }
                 item("page-head") { BackRow(pageTitle, { page = null }, "$pageCount") }
-                if (page == "playlists") {
+                if (page == "feeds") {
+                    item("feeds-hint") {
+                        Text("To follow a site, tap + and paste its address, then tap Follow.", Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    items(feedState.feeds, key = { "fl" + it.url }) { f -> FollowedRow(f) { app.feeds.unfollow(f.url) } }
+                    if (fresh.isNotEmpty()) item("feeds-new") { SectionHeader("New posts", fresh.size, limit = Int.MAX_VALUE) {} }
+                    items(fresh, key = { "fp" + it.item.link }) { f -> FeedRow(f, { openFeedItem(f.item.link) }, { app.feeds.hide(f.item.link) }) }
+                } else if (page == "playlists") {
                     item("pl-new") {
                         TextButton(onClick = { newPlaylistOpen = true }, modifier = Modifier.padding(horizontal = 10.dp)) {
                             Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))

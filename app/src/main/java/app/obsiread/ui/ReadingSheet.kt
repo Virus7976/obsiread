@@ -276,6 +276,11 @@ private fun BehaviorTab(s: AppSettings, set: ((AppSettings) -> AppSettings) -> U
         CardDivider()
         Toggle("Highlighter", "Hold a word, then drag.", s.highlighterEnabled) { v -> set { it.copy(highlighterEnabled = v) } }
     }
+    Card {
+        Stepper("Listen speed", "%.2f".format(s.listenRate).trimEnd('0').trimEnd('.') + "x", s.listenRate > 0.51f, s.listenRate < 2.49f,
+            { set { it.copy(listenRate = (it.listenRate - 0.25f).coerceAtLeast(0.5f)) } },
+            { set { it.copy(listenRate = (it.listenRate + 0.25f).coerceAtMost(2.5f)) } })
+    }
 }
 
 // ---------- parts ----------

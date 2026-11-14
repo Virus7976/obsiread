@@ -51,6 +51,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -248,6 +250,13 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     val pictures = rememberPictures(built, imageWidth)
 
     var tview by remember { mutableStateOf<TranscriptView?>(null) }
+    // Listen: the phone reads the page out loud and the page follows along.
+    val listen = remember { ReadAloud(ctx) }
+    DisposableEffect(listen) { onDispose { listen.shutdown() } }
+    listen.onPara = { i -> tview?.followPara(i) }
+    LaunchedEffect(listen.failed) {
+        if (listen.failed) android.widget.Toast.makeText(ctx, "This phone has no voice to read with.", android.widget.Toast.LENGTH_LONG).show()
+    }
     // Find in this article.
     var searching by remember(videoId) { mutableStateOf(false) }
     var query by remember(videoId) { mutableStateOf("") }
@@ -481,6 +490,16 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                                 Spacer(Modifier.width(8.dp))
                                 Text(timeLeft, maxLines = 1, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
                             } else Text(timeLeft, maxLines = 1, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = {
+                            if (listen.speaking) listen.stop()
+                            else tview?.let { listen.start(it.paragraphTexts(), it.paraAtTop(), settings.listenRate) }
+                        }) {
+                            Icon(
+                                if (listen.speaking) Icons.Rounded.Stop else Icons.Rounded.Headphones,
+                                if (listen.speaking) "Stop" else "Listen", Modifier.size(22.dp),
+                                tint = if (listen.speaking) scheme.primary else scheme.onSurfaceVariant,
+                            )
                         }
                         IconButton(onClick = { showReading = true }) {
                             Icon(Icons.Rounded.TextFields, "Reading settings", Modifier.size(22.dp), tint = scheme.onSurfaceVariant)
