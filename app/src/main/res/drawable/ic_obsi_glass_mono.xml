@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by obsi-core/tools/icons/render.py. The app mark alone, for themed icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="54" android:translateY="54" android:scaleX="2" android:scaleY="2">
+        <path android:fillColor="#FF000000" android:fillType="evenOdd" android:pathData="M-7.5,-9.5H7.5V9.5H-7.5Z M-4.6,-5.3V-3.7H4.6V-5.3Z M-4.6,-0.8V0.8H4.6V-0.8Z M-4.6,3.7V5.3H1.8V3.7Z" />
+    </group>
+</vector>
