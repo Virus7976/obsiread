@@ -171,8 +171,9 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ReaderScreen(videoId: String, onBack: () -> Unit) {
     val s by LocalApp.current.settings.state.collectAsState()
-    // Time spent reading, for the shared stats.
-    app.obsi.core.ui.CountTime()
+    // Time spent reading, for the shared stats, by the article's title.
+    val title = LocalApp.current.library.articles.collectAsState().value.firstOrNull { it.meta.id == videoId }?.meta?.title.orEmpty()
+    app.obsi.core.ui.CountTime(item = title)
     ReaderTheme(s.readerTheme) { ReaderBody(videoId, onBack) }
 }
 

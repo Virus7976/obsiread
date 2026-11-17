@@ -85,6 +85,11 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         app.obsi.core.share.SharedStyle.source = { app.obsi.core.share.ObsiStyle.of(settings.value) }
         app.obsi.core.share.SharedReview.due = { reviews.due(library.articles.value).map { shared(it.video, it.highlight) } }
         app.obsi.core.share.SharedReview.act = { key, action -> reviews.act(key, action) }
+        app.obsi.core.share.SharedSearch.source = { q ->
+            app.obsiread.data.LibrarySearch.search(q, library.articles.value, playlists.all.value).mapNotNull { h ->
+                when (h.kind) { app.obsiread.data.HitKind.Video -> hitFor(h, "item"); app.obsiread.data.HitKind.Highlight -> hitFor(h, "highlight"); else -> null }
+            }
+        }
         settings = SettingsStore(this)
         vaults = VaultStore(this) { settings.value.vaultFolders }
         updates = SelfUpdate(this, settings)
@@ -170,6 +175,14 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
     override fun IconPicker() = app.obsiread.ui.AppIconPicker()
 
     /** Every highlight, for the other Obsi apps to show. */
+
+    /** This app's answer when another Obsi app searches. */
+    private fun hitFor(h: app.obsiread.data.Hit, kind: String) = app.obsi.core.share.SharedHit(
+        app = app.obsi.core.ObsiApp.Read, kind = kind, title = h.title, subtitle = h.subtitle, snippet = h.snippet.orEmpty(),
+        itemId = h.videoId, at = if (kind == "item") "" else h.sec.toString(), score = h.score,
+        color = if (kind == "highlight") app.obsi.core.data.HighlightColors.getOrNull(h.color)?.ui ?: 0 else 0,
+    )
+
     private fun sharedHighlights(): List<app.obsi.core.share.SharedHighlight> =
         library.articles.value.flatMap { a -> a.highlights.map { h -> shared(a, h) } }
 
