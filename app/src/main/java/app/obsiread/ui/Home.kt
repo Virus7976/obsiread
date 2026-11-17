@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsi.core.data.HttpWords
 import app.obsi.core.*
 import app.obsi.core.data.*
 import app.obsi.core.obsidian.*
@@ -188,7 +189,7 @@ fun HomeScreen(
         scope.launch {
             runCatching { app.addFromUrl(link) }
                 .onSuccess { id -> app.feeds.hide(link); onOpen(id) }
-                .onFailure { snackbar.showSnackbar(it.message ?: "Could not read that page.") }
+                .onFailure { snackbar.showSnackbar(HttpWords.error(it, "Could not read that page.")) }
         }
     }
     // Every way of marking a video lands here, so each one can be undone the same way.
@@ -293,6 +294,11 @@ fun HomeScreen(
                 }
             }
 
+            // The streak and this week, from every Obsi app on the phone.
+            if (browsing) item("stats") {
+                StatsCard(nav.openStats, Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp))
+            }
+
             // The search icon covers everything you saved. A box here is only for a long list of this one kind.
             val listSize = when {
                 showQueue -> queue.size
@@ -377,7 +383,14 @@ fun HomeScreen(
                     )
                 } else {
                     val list = (if (page == "pinned") pinned else resumeAll).filter { it.matchesQuery(query) }
-                    if (list.isEmpty()) item("page-none") { Text("Nothing here matches.", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    if (list.isEmpty()) item("page-none") {
+                        val why = when {
+                            query.isNotBlank() -> "Nothing here matches."
+                            page == "pinned" -> "Nothing is pinned. Press and hold an item, then tap Pin to the top."
+                            else -> "Nothing to pick up. Items you started show here."
+                        }
+                        Text(why, Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     items(list, key = { "pg" + it.meta.id }) { v -> VideoRow(v, onMoreVideo) { onOpen(v.meta.id) } }
                 }
             }
@@ -719,9 +732,10 @@ private fun ContinueRow(v: Article, onMore: (String) -> Unit, onDone: (String) -
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val source = remember { MutableInteractionSource() }
     val scheme = MaterialTheme.colorScheme
-    val total = v.meta.durationSec.toDouble()
+    // The place is a word number. About 230 words a minute.
+    val total = v.meta.words.toDouble()
     val frac = if (total > 0) (v.positionSec / total).toFloat().coerceIn(0f, 1f) else 0f
-    val minutes = kotlin.math.ceil((total - v.positionSec).coerceAtLeast(0.0) / 60).toInt()
+    val minutes = kotlin.math.ceil((total - v.positionSec).coerceAtLeast(0.0) / 230).toInt()
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).springPress(source, 0.98f)
             .clip(RoundedCornerShape(20.dp))
@@ -741,7 +755,7 @@ private fun ContinueRow(v: Article, onMore: (String) -> Unit, onDone: (String) -
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text(v.meta.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
             Text(
-                listOf(if (minutes <= 1) "Almost done" else "$minutes min left", v.meta.author).filter { it.isNotBlank() }.joinToString("  ·  "),
+                listOf(if (total <= 0) "Started" else "${minutes.coerceAtLeast(1)} min left", v.meta.author).filter { it.isNotBlank() }.joinToString("  ·  "),
                 Modifier.padding(top = 2.dp), maxLines = 1, overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant,
             )

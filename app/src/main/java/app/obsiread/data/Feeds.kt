@@ -161,7 +161,7 @@ class FeedStore(context: Context) : JsonFileStore<FeedState>(File(context.filesD
             .header("Accept", "application/rss+xml, application/atom+xml, application/xml, text/xml, text/html;q=0.8")
             .build()
         http.newCall(req).execute().use { r ->
-            if (!r.isSuccessful) throw IOException("The site said ${r.code}.")
+            if (!r.isSuccessful) throw IOException(app.obsi.core.data.HttpWords.say(r.code, "The site"))
             val body = r.body ?: throw IOException("The site sent nothing.")
             if (body.contentLength() > 8_000_000) throw IOException("That page is too big.")
             r.request.url.toString() to body.string()

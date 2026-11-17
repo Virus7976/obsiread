@@ -46,6 +46,7 @@ class Nav(
     val openBrowser: (url: String, note: String?) -> Unit = { _, _ -> },
     val openReview: () -> Unit = {},
     val openHighlights: () -> Unit = {},
+    val openStats: () -> Unit = {},
 )
 
 val LocalNav = staticCompositionLocalOf<Nav> { error("Nav not provided") }
@@ -58,6 +59,7 @@ sealed interface Screen {
     data object Settings : Screen
     data object Review : Screen
     data object Highlights : Screen
+    data object Stats : Screen
     data class Template(val id: String) : Screen
     data class Browser(val url: String, val note: String? = null) : Screen
 }
@@ -89,6 +91,7 @@ fun AppRoot(app: ObsiReadApp, incomingLink: String?, onLinkConsumed: () -> Unit)
                     openBrowser = { url, note -> stack.add(Screen.Browser(url, note)) },
                     openReview = { if (stack.last() != Screen.Review) stack.add(Screen.Review) },
                     openHighlights = { if (stack.last() != Screen.Highlights) stack.add(Screen.Highlights) },
+                    openStats = { if (stack.last() != Screen.Stats) stack.add(Screen.Stats) },
                 )
             }
 
@@ -191,6 +194,7 @@ fun AppRoot(app: ObsiReadApp, incomingLink: String?, onLinkConsumed: () -> Unit)
                         })
                         Screen.Review -> ReviewScreen(onBack = { pop() })
                         Screen.Highlights -> HighlightsScreen(onBack = { pop() })
+                        Screen.Stats -> StatsScreen(onBack = { pop() })
                     }
                     }
                     }
@@ -208,6 +212,7 @@ private fun depth(s: Screen) = when (s) {
     Screen.Settings -> 1
     Screen.Review -> 1
     Screen.Highlights -> 1
+    Screen.Stats -> 1
     is Screen.Template -> 2
     is Screen.Browser -> 1
 }

@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsi.core.data.HttpWords
 import app.obsi.core.*
 import app.obsi.core.data.*
 import app.obsi.core.obsidian.*
@@ -99,7 +100,7 @@ fun AddSheet(initial: String?, onDismiss: () -> Unit, onPlaylist: (String) -> Un
         scope.launch {
             runCatching { app.addFromUrl(link) }
                 .onSuccess { id -> onDismiss(); nav.openVideo(id) }
-                .onFailure { error = it.message ?: "Could not read that page."; failedLink = link }
+                .onFailure { error = HttpWords.error(it, "Could not read that page."); failedLink = link }
             busy = false
         }
     }
@@ -116,7 +117,7 @@ fun AddSheet(initial: String?, onDismiss: () -> Unit, onPlaylist: (String) -> Un
                     android.widget.Toast.makeText(ctx, "Following ${f.title}", android.widget.Toast.LENGTH_SHORT).show()
                     onDismiss()
                 }
-                .onFailure { error = it.message ?: "That page has no feed." }
+                .onFailure { error = HttpWords.error(it, "That page has no feed.") }
             busy = false
         }
     }

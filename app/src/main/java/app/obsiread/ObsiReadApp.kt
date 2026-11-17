@@ -82,6 +82,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         app.obsi.core.Brand.init(app.obsi.core.ObsiApp.Read)
         app.obsi.core.share.SharedHighlights.source = ::sharedHighlights
         app.obsi.core.share.SharedSetup.source = { app.obsi.core.share.SharedSetup.of(settings.value) }
+        app.obsi.core.share.SharedStyle.source = { app.obsi.core.share.ObsiStyle.of(settings.value) }
         app.obsi.core.share.SharedReview.due = { reviews.due(library.articles.value).map { shared(it.video, it.highlight) } }
         app.obsi.core.share.SharedReview.act = { key, action -> reviews.act(key, action) }
         settings = SettingsStore(this)
@@ -152,7 +153,10 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
     }
 
     fun setDone(id: String, done: Boolean) {
-        if (done) { library.edit(id) { if (it.done) it else it.copy(doneAt = System.currentTimeMillis()) }; queue.remove(id) }
+        if (done) {
+            if (library.get(id)?.done == false) app.obsi.core.data.Activity.log(this).finished()
+            library.edit(id) { if (it.done) it else it.copy(doneAt = System.currentTimeMillis()) }; queue.remove(id)
+        }
         else library.edit(id) { it.copy(doneAt = 0L) }
     }
 

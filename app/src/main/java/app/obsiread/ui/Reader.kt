@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsi.core.data.HttpWords
 import app.obsi.core.*
 import app.obsi.core.data.*
 import app.obsi.core.obsidian.*
@@ -152,7 +153,7 @@ import app.obsi.core.data.HighlightColors
 import app.obsi.core.data.Highlights
 import app.obsiread.data.Article
 import app.obsi.core.data.TranscriptDoc
-import app.obsiread.data.ArticleDoc
+import app.obsi.core.data.ArticleDoc
 import app.obsiread.data.Markdown
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Refresh
@@ -170,6 +171,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ReaderScreen(videoId: String, onBack: () -> Unit) {
     val s by LocalApp.current.settings.state.collectAsState()
+    // Time spent reading, for the shared stats.
+    app.obsi.core.ui.CountTime()
     ReaderTheme(s.readerTheme) { ReaderBody(videoId, onBack) }
 }
 
@@ -411,7 +414,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                         Spacer(Modifier.height(12.dp))
                         Button(onClick = {
                             scope.launch {
-                                runCatching { app.refresh(videoId) }.onSuccess { reloads++ }.onFailure { snackbar.showSnackbar(it.message ?: "Could not read the page.") }
+                                runCatching { app.refresh(videoId) }.onSuccess { reloads++ }.onFailure { snackbar.showSnackbar(HttpWords.error(it, "Could not read the page.")) }
                             }
                         }, shapes = ButtonDefaults.shapes()) { Text("Read the page again") }
                     }
@@ -603,7 +606,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                                 scope.launch {
                                     runCatching { app.refresh(videoId) }
                                         .onSuccess { reloads++; snackbar.showSnackbar("Read the page again.") }
-                                        .onFailure { snackbar.showSnackbar(it.message ?: "Could not read the page.") }
+                                        .onFailure { snackbar.showSnackbar(HttpWords.error(it, "Could not read the page.")) }
                                 }
                             },
                         )

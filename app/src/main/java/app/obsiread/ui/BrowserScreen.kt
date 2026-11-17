@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsi.core.data.HttpWords
 import app.obsi.core.*
 import app.obsi.core.data.*
 import app.obsi.core.obsidian.*
@@ -89,7 +90,7 @@ fun BrowserScreen(startUrl: String, note: String?, onBack: () -> Unit, onRead: (
                 val found = Defuddle.run(v)
                 app.addFound(found, v.url ?: url)
             }.onSuccess { id -> onRead(id) }
-                .onFailure { snackbar.showSnackbar(it.message ?: "Could not read this page.") }
+                .onFailure { snackbar.showSnackbar(HttpWords.error(it, "Could not read this page.")) }
             reading = false
         }
     }

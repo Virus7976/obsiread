@@ -43,8 +43,8 @@
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="false"
-            android:icon="@mipmap/ic_launcher"
-            android:roundIcon="@mipmap/ic_launcher">
+            android:icon="@mipmap/ic_obsi_ruby"
+            android:roundIcon="@mipmap/ic_obsi_ruby">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -67,8 +67,8 @@
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="false"
-            android:icon="@mipmap/ic_launcher_sapphire"
-            android:roundIcon="@mipmap/ic_launcher_sapphire">
+            android:icon="@mipmap/ic_obsi_sapphire"
+            android:roundIcon="@mipmap/ic_obsi_sapphire">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -79,8 +79,8 @@
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="false"
-            android:icon="@mipmap/ic_launcher_emerald"
-            android:roundIcon="@mipmap/ic_launcher_emerald">
+            android:icon="@mipmap/ic_obsi_emerald"
+            android:roundIcon="@mipmap/ic_obsi_emerald">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -91,8 +91,8 @@
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="false"
-            android:icon="@mipmap/ic_launcher_amber"
-            android:roundIcon="@mipmap/ic_launcher_amber">
+            android:icon="@mipmap/ic_obsi_amber"
+            android:roundIcon="@mipmap/ic_obsi_amber">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -103,8 +103,8 @@
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="false"
-            android:icon="@mipmap/ic_launcher_classic"
-            android:roundIcon="@mipmap/ic_launcher_classic">
+            android:icon="@mipmap/ic_obsi_glass"
+            android:roundIcon="@mipmap/ic_obsi_glass">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

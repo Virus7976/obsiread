@@ -10,7 +10,7 @@ import app.obsi.core.share.*
 
 import app.obsi.core.data.AppSettings
 import app.obsiread.data.Article
-import app.obsiread.data.ArticleDoc
+import app.obsi.core.data.ArticleDoc
 import app.obsiread.data.Clipper
 import app.obsi.core.data.Highlights
 import app.obsiread.data.Markdown
