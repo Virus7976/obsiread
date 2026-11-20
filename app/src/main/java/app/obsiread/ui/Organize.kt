@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsi.core.ui.TagIdeasRow
 import app.obsi.core.*
 import app.obsi.core.data.*
 import app.obsi.core.obsidian.*
@@ -319,6 +320,7 @@ fun VideoActionsSheet(videoId: String, inPlaylist: Boolean = false, pending: Art
                             }
                         }
                     }
+                    TagIdeasRow(v.meta.title, everyTag, v.tags, { addTag(it) })
                 }
             }
 
