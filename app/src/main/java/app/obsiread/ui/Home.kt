@@ -490,7 +490,7 @@ fun HomeScreen(
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Search, "Search everything", Modifier.size(26.dp)) } }
             }
         }
-        if (showListen) ListenSheet(listen, listen.current, fromPara = { 0 }, onDismiss = { showListen = false })
+        if (showListen) ListenSheet(listen, listen.current, fromPara = { -1 }, onDismiss = { showListen = false })
         androidx.compose.material3.SnackbarHost(
             snackbar,
             Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.systemBars)

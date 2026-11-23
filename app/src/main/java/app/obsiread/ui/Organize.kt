@@ -48,6 +48,8 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.DownloadDone
+import app.obsi.core.speech.ReadAloud
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -269,6 +271,25 @@ fun VideoActionsSheet(videoId: String, inPlaylist: Boolean = false, pending: Art
                 if (videoNote(app, v) != null) {
                     RowDivider()
                     ListRow(Icons.Rounded.Description, "Open note") { if (openVideoNote(ctx, app, v)) onDismiss() }
+                }
+                // Audio to listen with no internet. Only for a voice that needs the internet.
+                val listen = remember { ReadAloud.get(ctx) }
+                val keeps by listen.keeps.collectAsState()
+                val k = keeps[videoId]
+                val saved by androidx.compose.runtime.produceState(false, videoId, k?.done, k?.running) {
+                    value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { listen.hasKept(videoId) }
+                }
+                // Some audio is there but how much is not known yet: count it, so the row can say saved or finish.
+                androidx.compose.runtime.LaunchedEffect(saved) { if (saved && keeps[videoId] == null) app.listenDoc(videoId)?.let { listen.refreshKeep(it) } }
+                if (inLib && listen.keepVoice("en-US")?.online == true) {
+                    RowDivider()
+                    when {
+                        k?.running == true -> ListRow(Icons.Rounded.Download, "Stop saving audio (${k.done} of ${k.total})") { listen.stopKeep(videoId) }
+                        saved && k?.complete == true -> ListRow(Icons.Rounded.DownloadDone, "Delete saved audio") { listen.removeKept(videoId) }
+                        else -> ListRow(Icons.Rounded.Download, if (saved) "Finish saving audio" else "Save audio for offline") {
+                            scope.launch { app.listenDoc(videoId)?.let { listen.keep(it) } }
+                        }
+                    }
                 }
                 RowDivider()
                 ListRow(Icons.Rounded.OpenInNew, "Open the web page") {
@@ -669,9 +690,27 @@ fun DoneBadge() {
     }
 }
 
-/** Kept for rows that still ask. Articles have no audio to save yet. */
+/** A small mark on an article whose read-aloud audio is on the phone, or is being saved now. */
 @Composable
-fun OfflineBadge(id: String) {}
+fun OfflineBadge(id: String) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val listen = remember { ReadAloud.get(ctx) }
+    val keeps by listen.keeps.collectAsState()
+    val k = keeps[id]
+    val saved by androidx.compose.runtime.produceState(false, id, k?.done, k?.running) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { listen.hasKept(id) }
+    }
+    val tone = MaterialTheme.colorScheme.onSurfaceVariant
+    val label = when {
+        k?.running == true && k.total > 0 -> "Saving audio ${k.done * 100 / k.total}%"
+        saved -> "Audio saved"
+        else -> return
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(if (k?.running == true) Icons.Rounded.Download else Icons.Rounded.DownloadDone, null, Modifier.size(14.dp), tint = tone)
+        Text(label, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium, color = tone)
+    }
+}
 
 /**
  * Opens the note for this video in Obsidian. Uses where the last clip went,

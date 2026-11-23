@@ -137,7 +137,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
     suspend fun listenDoc(id: String): app.obsi.core.speech.ListenDoc? = withContext(Dispatchers.Default) {
         val a = library.get(id) ?: return@withContext null
         val body = library.loadBody(id) ?: return@withContext null
-        val b = ArticleDoc.build(body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image)
+        val b = ArticleDoc.cached(id, body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image)
         app.obsi.core.speech.ListenSkip.ofArticle(id, a.meta.title, a.meta.siteName, b)
     }
 
@@ -145,7 +145,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
     suspend fun listenFrom(id: String): Pair<app.obsi.core.speech.ListenDoc, Int>? = withContext(Dispatchers.Default) {
         val a = library.get(id) ?: return@withContext null
         val body = library.loadBody(id) ?: return@withContext null
-        val b = ArticleDoc.build(body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image)
+        val b = ArticleDoc.cached(id, body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image)
         val at = a.positionSec.toInt()
         val para = if (a.done || at <= 0) 0 else b.doc.paras.indexOfFirst { at <= it.lastWord }.coerceAtLeast(0)
         app.obsi.core.speech.ListenSkip.ofArticle(id, a.meta.title, a.meta.siteName, b) to para

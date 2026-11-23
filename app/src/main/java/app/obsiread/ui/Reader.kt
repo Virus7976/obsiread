@@ -222,10 +222,12 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     // The article, laid out as one piece of text, built off the main thread.
     val built by produceState<ArticleDoc.Built?>(null, videoId, reloads, byline) {
         value = withContext(Dispatchers.Default) {
-            app.library.loadBody(videoId)?.let { ArticleDoc.build(it, video.meta.title, byline, video.meta.image) }
+            app.library.loadBody(videoId)?.let { ArticleDoc.cached(videoId, it, video.meta.title, byline, video.meta.image) }
         }
     }
     val doc = built?.doc
+    // Read off the main thread: it ran on every frame while the page was loading.
+    val bodyMissing by produceState(false, videoId, reloads) { value = withContext(Dispatchers.IO) { app.library.loadBody(videoId) == null } }
     val colors = remember(doc, video.highlights) { doc?.let { Highlights.colorByWord(it.words, video.highlights) } }
     val noted = remember(doc, video.highlights) { doc?.let { Highlights.notedRuns(it.words, video.highlights) } }
     val runs = remember(doc, video.highlights) { doc?.let { Highlights.runs(it.words, video.highlights) } }
@@ -256,7 +258,8 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     val screenW = ctx.resources.displayMetrics.widthPixels
     val imageWidth = minOf(style.maxWidthPx, screenW - with(density) { 36.dp.roundToPx() })
 
-    val pictures = rememberPictures(built, imageWidth)
+    // Null for a moment while the saved pictures load, so the page is laid out once with them in.
+    val pictures = rememberPicturesReady(built, imageWidth)
 
     var tview by remember { mutableStateOf<TranscriptView?>(null) }
     // Listen: the page is read out loud, it keeps going with the screen off, and the spoken word is lit.
@@ -285,8 +288,13 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     }
     fun listenHere() {
         val ld = listenDoc ?: return
-        if (hearingThis) showListen = true
-        else listen.play(ld, tview?.paraAtTop() ?: 0)
+        val here = tview?.paraAtTop() ?: 0
+        when {
+            // Paused, and you read on since: start where you are now, not where the voice stopped.
+            hearingThis && !heard.playing && kotlin.math.abs(here - heard.para) > 1 -> { away = false; listen.play(ld, here) }
+            hearingThis -> showListen = true
+            else -> listen.play(ld, here)
+        }
     }
     // Find in this article.
     var searching by remember(videoId) { mutableStateOf(false) }
@@ -385,7 +393,8 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
             Box(Modifier.weight(1f).fillMaxWidth().then(if (editingId != null) Modifier else Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility)).clipToBounds().graphicsLayer { alpha = fade }) {
                 val d = doc
                 val b = built
-                if (d != null && b != null && settled) {
+                val pics = pictures
+                if (d != null && b != null && settled && pics != null) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { c -> TranscriptView(c).also { tview = it } },
@@ -436,12 +445,12 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                             tv.onErase = { a, bb ->
                                 app.library.edit(videoId) { it.copy(highlights = Highlights.erase(it.highlights, d.words, d::plainText, a, bb)) }
                             }
-                            tv.bind(d, style, b.styles, pictures, imageWidth)
+                            tv.bind(d, style, b.styles, pics, imageWidth)
                             colors?.let { tv.applyHighlights(it, runs.orEmpty()) }
                             noted?.let { tv.applyNotes(it) }
                         },
                     )
-                } else if (settled && built == null && app.library.loadBody(videoId) == null) {
+                } else if (settled && built == null && bodyMissing) {
                     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("The text of this article is missing.", style = MaterialTheme.typography.bodyLarge)
                         Spacer(Modifier.height(12.dp))
