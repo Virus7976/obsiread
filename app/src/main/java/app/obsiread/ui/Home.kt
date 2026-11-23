@@ -136,7 +136,7 @@ fun HomeScreen(
     // Read aloud: what plays now shows above the tabs, and the queue plays one article after another.
     val listen = remember { ReadAloud.get(ctx) }
     val heard by listen.ui.collectAsState()
-    val nowId: String? = heard.docId.takeIf { heard.active && it.isNotBlank() }
+    val nowId: String? = heard.docId.takeIf { heard.active && !heard.ended && it.isNotBlank() }
     var showListen by remember { mutableStateOf(false) }
     fun playArticle(id: String) = scope.launch { app.listenFrom(id)?.let { (d, para) -> listen.play(d, para) } }
     val clipping by app.clipping.collectAsState()
@@ -477,7 +477,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.weight(1f)) {
-                    BottomTabs(visibleTabs, tab.takeIf { it in visibleTabs } ?: visibleTabs.first(), queue.size) { id ->
+                    BottomTabs(visibleTabs, tab.takeIf { it in visibleTabs } ?: visibleTabs.first(), queue.count { it != nowId }) { id ->
                         if (tab != id) tab = id
                         else if (openPlaylist != null || page != null) { openPlaylist = null; page = null }
                         else scope.launch { listState.animateScrollToItem(0) }

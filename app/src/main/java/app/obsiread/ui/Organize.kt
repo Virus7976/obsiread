@@ -222,7 +222,7 @@ fun VideoActionsSheet(videoId: String, inPlaylist: Boolean = false, pending: Art
             // quick actions
             val inQueue = videoId in queue
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ActionTile(Icons.Rounded.PlayArrow, "Read next", false, Modifier.weight(1f)) { act { app.queue.playNext(videoId); onDismiss() } }
+                ActionTile(Icons.Rounded.PlayArrow, "Play next", false, Modifier.weight(1f)) { act { app.queue.playNext(videoId); onDismiss() } }
                 ActionTile(Icons.Rounded.QueueMusic, if (inQueue) "In queue" else "Queue", inQueue, Modifier.weight(1f)) {
                     act { if (inQueue) app.queue.remove(videoId) else app.queue.add(videoId) }
                 }

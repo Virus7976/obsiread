@@ -106,9 +106,26 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         seedFromBundledClipperSettings()
         updates.checkIfDue()
         // Up next is read aloud one after another: when one article ends, the next starts.
-        app.obsi.core.speech.ReadAloud.get(this).upNext = { finished ->
+        val listen = app.obsi.core.speech.ReadAloud.get(this)
+        listen.upNext = { finished ->
             queue.remove(finished)
-            queue.ids.value.firstNotNullOfOrNull { listenFrom(it) }
+            // An article that can no longer be opened leaves the queue, so it never blocks the rest.
+            var next: Pair<app.obsi.core.speech.ListenDoc, Int>? = null
+            for (id in queue.ids.value) {
+                next = listenFrom(id)
+                if (next != null) break
+                queue.remove(id)
+            }
+            next
+        }
+        // Listening saves your place like reading does, so the article and the queue start there next time.
+        var lastPlace = 0L
+        listen.onPlace = { id, word ->
+            val now = System.currentTimeMillis()
+            if (now - lastPlace > 10_000) {
+                lastPlace = now
+                appScope.launch { library.edit(id) { it.copy(positionSec = word.toDouble(), playedAt = now) } }
+            }
         }
         // Audio that was still being saved when the app closed goes on saving.
         if (app.obsi.core.speech.ListenPrefs(this).queued().isNotEmpty()) {
