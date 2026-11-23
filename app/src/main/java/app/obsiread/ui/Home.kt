@@ -138,7 +138,7 @@ fun HomeScreen(
     val heard by listen.ui.collectAsState()
     val nowId: String? = heard.docId.takeIf { heard.active && !heard.ended && it.isNotBlank() }
     var showListen by remember { mutableStateOf(false) }
-    fun playArticle(id: String) = scope.launch { app.listenFrom(id)?.let { (d, para) -> listen.play(d, para) } }
+    fun playArticle(id: String) = scope.launch { app.listenFrom(id)?.let { (d, para) -> listen.play(d, para, inQueue = true) } }
     val clipping by app.clipping.collectAsState()
     // New posts from the sites you follow.
     val feedState by app.feeds.state.collectAsState()
