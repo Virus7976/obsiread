@@ -171,7 +171,8 @@ fun LinkPeek(start: String?, style: ReaderStyle, imageWidth: Int, onClose: () ->
                             }
                         }
                         else -> {
-                            val pictures = rememberPictures(peeked.built, imageWidth)
+                            val showPictures = app.settings.state.collectAsState().value.showPictures
+                            val pictures = rememberPictures(peeked.built, imageWidth).let { if (showPictures) it else emptyMap() }
                             AndroidView(
                                 modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(0.dp)),
                                 factory = { c -> TranscriptView(c) },

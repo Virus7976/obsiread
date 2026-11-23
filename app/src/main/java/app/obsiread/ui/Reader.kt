@@ -35,6 +35,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.animation.core.spring
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -260,7 +261,8 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     val imageWidth = minOf(style.maxWidthPx, screenW - with(density) { 36.dp.roundToPx() })
 
     // Null for a moment while the saved pictures load, so the page is laid out once with them in.
-    val pictures = rememberPicturesReady(built, imageWidth)
+    // Hidden pictures still load, so turning them back on does not lay the page out from scratch.
+    val pictures = rememberPicturesReady(built, imageWidth)?.let { if (settings.showPictures) it else emptyMap() }
 
     var tview by remember { mutableStateOf<TranscriptView?>(null) }
     // Listen: the page is read out loud, it keeps going with the screen off, and the spoken word is lit.
@@ -645,6 +647,12 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                             leadingIcon = { Icon(Icons.Rounded.TaskAlt, null) },
                             trailingIcon = { if (video.done) Icon(Icons.Rounded.Check, "On", tint = scheme.primary) },
                             onClick = { app.setDone(videoId, !video.done) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Show pictures") },
+                            leadingIcon = { Icon(Icons.Rounded.Image, null) },
+                            trailingIcon = { if (settings.showPictures) Icon(Icons.Rounded.Check, "On", tint = scheme.primary) },
+                            onClick = { menu = false; app.settings.update { it.copy(showPictures = !it.showPictures) } },
                         )
                         DropdownMenuItem(
                             text = { Text("Open the web page") },
