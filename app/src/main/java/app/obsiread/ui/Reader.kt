@@ -270,6 +270,9 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     }
     var showListen by remember { mutableStateOf(false) }
     val hearingThis = heard.active && heard.docId == videoId
+    // You scrolled away from the spoken word: the page stops following and the player shows Sync.
+    var away by remember { mutableStateOf(false) }
+    var heardWord by remember { mutableIntStateOf(-1) }
     LaunchedEffect(heard.para, heard.word, hearingThis, tview, doc) {
         val tv = tview ?: return@LaunchedEffect
         val d = doc ?: return@LaunchedEffect
@@ -278,6 +281,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
         if (!hearingThis || p == null || r == null) { tv.setActive(-1); return@LaunchedEffect }
         val w = d.wordAtChar(p.charStart + r.first)
         if (w >= 0) {
+            heardWord = w
             if (listen.prefs.highlightWords) tv.setActive(w) else tv.setActive(-1)
             if (listen.prefs.followAlong) tv.follow(w)
         }
@@ -390,6 +394,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                         factory = { c -> TranscriptView(c).also { tview = it } },
                         update = { tv ->
                             tv.onSeek = { }
+                            tv.onAway = { away = it }
                             tv.onUserScroll = { dy, atTop ->
                                 if (atTop) headerHidden = false
                                 // Only a tap brings the bars back. Scrolling up never pops them in under your finger.
@@ -558,7 +563,10 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
             if (!barsHidden && editingId == null) with(density) { barHeight.toDp() } else navBottom,
             spring(1f, 500f), label = "listenLift",
         )
-        if (editingId == null) ListenBar(listen, onOpen = { showListen = true }, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = listenLift))
+        if (editingId == null) ListenBar(
+            listen, onOpen = { showListen = true }, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = listenLift),
+            onSync = if (away && hearingThis && listen.prefs.followAlong && heardWord >= 0) ({ tview?.resync(heardWord); away = false }) else null,
+        )
 
         if (showListen) ListenSheet(listen, listenDoc, fromPara = { tview?.paraAtTop() ?: 0 }, onDismiss = { showListen = false })
 
