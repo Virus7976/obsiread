@@ -129,6 +129,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clipToBounds
@@ -492,14 +493,12 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
         }
 
         // Bottom bar: highlights, how much is left, and Clip. It slides away while you read down.
-        // The read aloud player sits on top of it, and stays when it slides away.
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-        if (editingId == null) ListenBar(
-            listen, onOpen = { showListen = true },
-            modifier = if (barsHidden) Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility) else Modifier,
-        )
+        // The read aloud player sits on top of it. When the bar slides away, the player glides down with it,
+        // on the same spring, so the two move as one.
+        var barHeight by remember { mutableIntStateOf(0) }
         AnimatedVisibility(
             visible = !barsHidden && editingId == null,
+            modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { if (it.height > 0) barHeight = it.height },
             enter = androidx.compose.animation.slideInVertically(spring(1f, 500f)) { it },
             exit = androidx.compose.animation.slideOutVertically(spring(1f, 500f)) { it },
         ) {
@@ -554,7 +553,12 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
             }
         }
 
-        }
+        val navBottom = WindowInsets.navigationBarsIgnoringVisibility.asPaddingValues().calculateBottomPadding()
+        val listenLift by androidx.compose.animation.core.animateDpAsState(
+            if (!barsHidden && editingId == null) with(density) { barHeight.toDp() } else navBottom,
+            spring(1f, 500f), label = "listenLift",
+        )
+        if (editingId == null) ListenBar(listen, onOpen = { showListen = true }, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = listenLift))
 
         if (showListen) ListenSheet(listen, listenDoc, fromPara = { tview?.paraAtTop() ?: 0 }, onDismiss = { showListen = false })
 
@@ -656,7 +660,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
 
         // While the bars are hidden: only how far you are, small and faint.
         AnimatedVisibility(
-            visible = barsHidden && settings.showProgressHidden && built != null,
+            visible = barsHidden && settings.showProgressHidden && built != null && !heard.active,
             modifier = Modifier.align(Alignment.BottomEnd).windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(end = 18.dp, bottom = 6.dp),
             enter = fadeIn(), exit = fadeOut(),
         ) {

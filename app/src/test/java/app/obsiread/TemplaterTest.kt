@@ -148,6 +148,40 @@ big_idea: <% JSON.stringify(bigIdea) %>
     }
 
     @Test
+    fun aPropertyAddedInTheAppReachesTheNoteAndStays() {
+        val t = read()
+        val tags = TemplateProperty("t1", "tags", "clippings, video", "multitext")
+        val edited = t.copy(properties = t.properties + tags)
+        val out = VaultTemplate.writeBack(source, edited, t)!!
+        // It goes last in the properties, and the script and every tag line stay exactly as they were.
+        assertTrue(out.contains("big_idea: <% JSON.stringify(bigIdea) %>\ntags:\n  - \"clippings\"\n  - \"video\"\n---"))
+        assertEquals(source.substringBefore("---"), out.substringBefore("---"))
+        // Opening the template again (the note is read again) keeps it.
+        val again = VaultTemplate.read(out, "Templates/Source.md", emptyMap(), edited)
+        assertTrue(again.properties.any { it.name == "tags" && it.value == "clippings, video" })
+        // And nothing more is written the next time.
+        assertNull(VaultTemplate.writeBack(out, again, again))
+    }
+
+    @Test
+    fun anAddedPropertyFilledFromTheVideoSitsEmptyInTheNote() {
+        val t = read()
+        val edited = t.copy(properties = t.properties + TemplateProperty("c1", "channel", "{{author}}", ""))
+        val out = VaultTemplate.writeBack(source, edited, t)!!
+        assertTrue(out.contains("\nchannel:\n---"))
+    }
+
+    @Test
+    fun aPlainTagsListInATemplaterNoteCanBeChanged() {
+        val text = source.replace("big_idea: <% JSON.stringify(bigIdea) %>\n", "big_idea: <% JSON.stringify(bigIdea) %>\ntags:\n  - \"old\"\n")
+        val t = read(text)
+        val edited = t.copy(properties = t.properties.map { if (it.name == "tags") it.copy(value = "new, two", ask = false) else it })
+        val out = VaultTemplate.writeBack(text, edited, t)!!
+        assertTrue(out.contains("tags:\n  - \"new\"\n  - \"two\"\n---"))
+        assertFalse(out.contains("old"))
+    }
+
+    @Test
     fun appChoicesForTagLinesAreNeverWrittenOverTheTags() {
         val t = read()
         val edited = t.copy(properties = t.properties.map { if (it.name == "author") it.copy(value = "Someone") else it })
