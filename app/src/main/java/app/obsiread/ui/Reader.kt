@@ -266,39 +266,12 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
 
     var tview by remember { mutableStateOf<TranscriptView?>(null) }
     // Listen: the page is read out loud, it keeps going with the screen off, and the spoken word is lit.
-    val listen = remember { ReadAloud.get(ctx) }
+    val pageListen = rememberPageListen(videoId, video.meta.title, video.meta.siteName, built)
+    val listen = pageListen.engine
     val heard by listen.ui.collectAsState()
-    val listenDoc = remember(built, videoId) {
-        built?.let { b -> ListenSkip.ofArticle(videoId, video.meta.title, video.meta.siteName, b) }
-    }
-    var showListen by remember { mutableStateOf(false) }
-    val hearingThis = heard.active && heard.docId == videoId
-    // You scrolled away from the spoken word: the page stops following and the player shows Sync.
-    var away by remember { mutableStateOf(false) }
-    var heardWord by remember { mutableIntStateOf(-1) }
-    LaunchedEffect(heard.para, heard.word, hearingThis, tview, doc) {
-        val tv = tview ?: return@LaunchedEffect
-        val d = doc ?: return@LaunchedEffect
-        val p = d.paras.getOrNull(heard.para)
-        val r = heard.word
-        if (!hearingThis || p == null || r == null) { tv.setActive(-1); return@LaunchedEffect }
-        val w = d.wordAtChar(p.charStart + r.first)
-        if (w >= 0) {
-            heardWord = w
-            if (listen.prefs.highlightWords) tv.setActive(w) else tv.setActive(-1)
-            if (listen.prefs.followAlong) tv.follow(w)
-        }
-    }
-    fun listenHere() {
-        val ld = listenDoc ?: return
-        val here = tview?.paraAtTop() ?: 0
-        when {
-            // Paused, and you read on since: start where you are now, not where the voice stopped.
-            hearingThis && !heard.playing && kotlin.math.abs(here - heard.para) > 1 -> { away = false; listen.play(ld, here) }
-            hearingThis -> showListen = true
-            else -> listen.play(ld, here)
-        }
-    }
+    val listenDoc = pageListen.doc
+    val hearingThis = pageListen.hearing
+    fun listenHere() = pageListen.listenHere()
     // Find in this article.
     var searching by remember(videoId) { mutableStateOf(false) }
     var query by remember(videoId) { mutableStateOf("") }
@@ -405,11 +378,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                         factory = { c -> TranscriptView(c).also { tview = it } },
                         update = { tv ->
                             tv.onSeek = { }
-                            tv.onAway = { away = it }
-                            tv.onListenFrom = { at ->
-                                val pi = d.paras.indexOfLast { it.charStart <= at }
-                                listenDoc?.let { ld -> if (pi >= 0) { away = false; listen.play(ld, pi, at - d.paras[pi].charStart) } }
-                            }
+                            pageListen.attach(tv, d)
                             tv.onUserScroll = { dy, atTop ->
                                 if (atTop) headerHidden = false
                                 // Only a tap brings the bars back. Scrolling up never pops them in under your finger.
@@ -578,12 +547,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
             if (!barsHidden && editingId == null) with(density) { barHeight.toDp() } else navBottom,
             spring(1f, 500f), label = "listenLift",
         )
-        if (editingId == null) ListenBar(
-            listen, onOpen = { showListen = true }, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = listenLift),
-            onSync = if (away && hearingThis && listen.prefs.followAlong && heardWord >= 0) ({ tview?.resync(heardWord); away = false }) else null,
-        )
-
-        if (showListen) ListenSheet(listen, listenDoc, fromPara = { tview?.paraAtTop() ?: 0 }, onDismiss = { showListen = false })
+        PageListenPlayer(pageListen, Modifier.align(Alignment.BottomCenter).padding(bottom = listenLift), showBar = editingId == null)
 
         // The headings in the phone's own pull-up sheet. The one you are in is marked, and a tap jumps there.
         if (showContents) {
@@ -635,13 +599,23 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "More") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, shape = RoundedCornerShape(24.dp)) {
-                        Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            MenuTile("Find", Icons.Rounded.Search, on = searching) { menu = false; searching = true }
-                            MenuTile("Contents", Icons.Rounded.FormatListBulleted, on = false, enabled = heads.isNotEmpty()) { menu = false; showContents = true }
-                            MenuTile("Listen", Icons.Rounded.Headphones, on = hearingThis, enabled = listenDoc != null) { menu = false; if (hearingThis) showListen = true else { listenHere(); showListen = true } }
-                            MenuTile("Reading", Icons.Rounded.TextFields, on = showReading) { menu = false; showReading = true }
-                        }
-                        androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp), color = scheme.outlineVariant.copy(alpha = 0.4f))
+                        val quick = listOf(
+                            QuickAction("find", "Find", Icons.Rounded.Search, on = searching) { menu = false; searching = true },
+                            QuickAction("contents", "Contents", Icons.Rounded.FormatListBulleted, enabled = heads.isNotEmpty()) { menu = false; showContents = true },
+                            QuickAction("listen", "Listen", Icons.Rounded.Headphones, on = hearingThis, enabled = listenDoc != null) {
+                                menu = false
+                                if (hearingThis) pageListen.showSheet = true else { listenHere(); pageListen.showSheet = true }
+                            },
+                            QuickAction("reading", "Reading", Icons.Rounded.TextFields, on = showReading) { menu = false; showReading = true },
+                            QuickAction("done", "Done", Icons.Rounded.TaskAlt, on = video.done) { app.setDone(videoId, !video.done) },
+                            QuickAction("pictures", "Pictures", Icons.Rounded.Image, on = settings.showPictures) { app.settings.update { it.copy(showPictures = !it.showPictures) } },
+                            QuickAction("share", "Share", Icons.Rounded.Share) { menu = false; share() },
+                            QuickAction("web", "Web page", Icons.Rounded.OpenInNew) { menu = false; openLink(video.meta.url) },
+                        )
+                        ActionMenu(
+                            quick, settings.quickButtons ?: listOf("find", "contents", "listen", "reading"),
+                            onPicked = { keys -> app.settings.update { it.copy(quickButtons = keys) } },
+                        ) { _ ->
                         DropdownMenuItem(
                             text = { Text("Mark as done") },
                             leadingIcon = { Icon(Icons.Rounded.TaskAlt, null) },
@@ -681,6 +655,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                             leadingIcon = { Icon(Icons.Rounded.Sell, null) },
                             onClick = { menu = false; showActions = true },
                         )
+                        }
                     }
                 }
             }
@@ -1027,23 +1002,3 @@ private fun FindBar(query: String, count: Int, at: Int, onQuery: (String) -> Uni
     }
 }
 
-/** A square switch in the reader's menu: an icon over a short name, filled while it is on. */
-@Composable
-private fun MenuTile(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, on: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    Column(
-        Modifier.size(width = 68.dp, height = 64.dp).clip(RoundedCornerShape(16.dp))
-            .background(if (on) scheme.primaryContainer else scheme.surfaceContainerHighest)
-            .clickable(enabled = enabled, onClickLabel = label, onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-    ) {
-        val tint = when {
-            !enabled -> scheme.outline
-            on -> scheme.onPrimaryContainer
-            else -> scheme.onSurface
-        }
-        Icon(icon, null, Modifier.size(22.dp), tint = tint)
-        Spacer(Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
-    }
-}
