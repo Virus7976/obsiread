@@ -105,6 +105,11 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         }
         seedFromBundledClipperSettings()
         updates.checkIfDue()
+        // Up next is read aloud one after another: when one article ends, the next starts.
+        app.obsi.core.speech.ReadAloud.get(this).upNext = { finished ->
+            queue.remove(finished)
+            queue.ids.value.firstNotNullOfOrNull { listenFrom(it) }
+        }
         // Audio that was still being saved when the app closed goes on saving.
         if (app.obsi.core.speech.ListenPrefs(this).queued().isNotEmpty()) {
             app.obsi.core.speech.ReadAloud.get(this).resumeKeeps { listenDoc(it) }
@@ -117,6 +122,16 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         val body = library.loadBody(id) ?: return@withContext null
         val b = ArticleDoc.build(body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image)
         app.obsi.core.speech.ListenSkip.ofArticle(id, a.meta.title, a.meta.siteName, b)
+    }
+
+    /** An article to read aloud, and the paragraph where you stopped reading it. A finished one starts at the top. */
+    suspend fun listenFrom(id: String): Pair<app.obsi.core.speech.ListenDoc, Int>? = withContext(Dispatchers.Default) {
+        val a = library.get(id) ?: return@withContext null
+        val body = library.loadBody(id) ?: return@withContext null
+        val b = ArticleDoc.build(body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image)
+        val at = a.positionSec.toInt()
+        val para = if (a.done || at <= 0) 0 else b.doc.paras.indexOfFirst { at <= it.lastWord }.coerceAtLeast(0)
+        app.obsi.core.speech.ListenSkip.ofArticle(id, a.meta.title, a.meta.siteName, b) to para
     }
 
     /** A new save gets its audio too, when asked for in Read aloud settings. */

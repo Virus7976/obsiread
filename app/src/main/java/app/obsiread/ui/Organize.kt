@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.Button
@@ -587,29 +588,46 @@ private fun PlaylistHeader(p: Playlist, onBack: () -> Unit) {
 
 // ---------- queue tab ----------
 
-fun LazyListScope.queueTab(queue: List<String>, videos: List<Article>, nowId: String?, onOpenVideo: (String) -> Unit, onClear: () -> Unit, onRemove: (String) -> Unit, onMore: (String) -> Unit) {
+/**
+ * Up next: articles read aloud one after another. When one ends it leaves the list and the next starts.
+ * [nowId] is the article being read aloud now.
+ */
+fun LazyListScope.queueTab(
+    queue: List<String>, videos: List<Article>, nowId: String?, playing: Boolean, onOpenVideo: (String) -> Unit,
+    onPlay: (String) -> Unit, onToggle: () -> Unit, onClear: () -> Unit, onRemove: (String) -> Unit, onMore: (String) -> Unit,
+) {
     val now = nowId?.let { id -> videos.firstOrNull { it.meta.id == id } }
     if (now != null) {
-        item("q-now") { Text("Reading now", Modifier.padding(horizontal = 20.dp, vertical = 8.dp), style = MaterialTheme.typography.titleSmall) }
-        item("q-now-row") { QueueRow(now, onClick = { onOpenVideo(now.meta.id) }, onLongClick = { onMore(now.meta.id) }) }
+        item("q-now") { Text("Listening now", Modifier.padding(horizontal = 20.dp, vertical = 8.dp), style = MaterialTheme.typography.titleSmall) }
+        item("q-now-row") {
+            QueueRow(now, onClick = { onOpenVideo(now.meta.id) }, onLongClick = { onMore(now.meta.id) }, trailing = {
+                androidx.compose.material3.FilledIconButton(onClick = onToggle) {
+                    Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause" else "Play")
+                }
+            })
+        }
     }
+    val rows = queue.filter { it != nowId }.mapNotNull { id -> videos.firstOrNull { it.meta.id == id } }
     item("q-label") {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Up next", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-            if (queue.isNotEmpty()) TextButton(onClick = onClear) { Text("Clear") }
+            if (rows.isNotEmpty() && now == null) TextButton(onClick = { onPlay(rows.first().meta.id) }) {
+                Icon(Icons.Rounded.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Play all")
+            }
+            if (rows.isNotEmpty()) TextButton(onClick = onClear) { Text("Clear") }
         }
     }
-    val rows = queue.mapNotNull { id -> videos.firstOrNull { it.meta.id == id } }
     if (rows.isEmpty()) {
         item("q-empty") {
             Text(
-                "Nothing is waiting. Open the ⋮ menu on an article and choose Up next.",
+                "Nothing is waiting. Tap Queue in an article's ⋮ menu. Up next is read aloud one article after another.",
                 Modifier.padding(24.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
     items(rows, key = { "q" + it.meta.id }) { v ->
         androidx.compose.foundation.layout.Box(Modifier.animateItem()) { QueueRow(v, onClick = { onOpenVideo(v.meta.id) }, onLongClick = { onMore(v.meta.id) }, trailing = {
+            IconButton(onClick = { onPlay(v.meta.id) }) { Icon(Icons.Rounded.PlayArrow, "Listen now") }
             IconButton(onClick = { onRemove(v.meta.id) }) { Icon(Icons.Rounded.Close, "Remove from queue", tint = MaterialTheme.colorScheme.outline) }
         }) }
     }

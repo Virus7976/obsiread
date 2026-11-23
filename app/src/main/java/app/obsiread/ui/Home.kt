@@ -95,6 +95,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import app.obsi.core.speech.ReadAloud
+import app.obsi.core.ui.ListenBar
+import app.obsi.core.ui.ListenSheet
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,7 +133,12 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val settings by app.settings.state.collectAsState()
     val videos by app.library.articles.collectAsState()
-    val nowId: String? = null
+    // Read aloud: what plays now shows above the tabs, and the queue plays one article after another.
+    val listen = remember { ReadAloud.get(ctx) }
+    val heard by listen.ui.collectAsState()
+    val nowId: String? = heard.docId.takeIf { heard.active && it.isNotBlank() }
+    var showListen by remember { mutableStateOf(false) }
+    fun playArticle(id: String) = scope.launch { app.listenFrom(id)?.let { (d, para) -> listen.play(d, para) } }
     val clipping by app.clipping.collectAsState()
     // New posts from the sites you follow.
     val feedState by app.feeds.state.collectAsState()
@@ -237,7 +245,7 @@ fun HomeScreen(
             state = listState,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                 top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-                bottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + if (visibleTabs.size > 1) 160.dp else 100.dp,
+                bottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + (if (visibleTabs.size > 1) 160.dp else 100.dp) + (if (nowId != null) 72.dp else 0.dp),
             ),
         ) {
             // The page's name, large, like a title in Apple's apps. The tabs that change it are at the bottom.
@@ -324,7 +332,8 @@ fun HomeScreen(
 
             if (showQueue) queueTab(
                 queue = if (query.isBlank()) queue else queue.filter { id -> videos.firstOrNull { it.meta.id == id }?.matchesQuery(query) == true },
-                videos = videos, nowId = if (query.isBlank()) nowId else null, onOpenVideo = onOpen,
+                videos = videos, nowId = if (query.isBlank()) nowId else null, playing = heard.playing, onOpenVideo = onOpen,
+                onPlay = { playArticle(it) }, onToggle = { listen.toggle() },
                 onClear = { app.queue.clear() }, onRemove = { app.queue.remove(it) },
                 onMore = { actionsInPlaylist = false; actionsFor = it },
             )
@@ -462,6 +471,7 @@ fun HomeScreen(
         // The mini player rests on the tab bar, like Apple Music: what plays, then where you can go.
         val tabbed = visibleTabs.size > 1
         Column(Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.systemBars).padding(bottom = 8.dp)) {
+            ListenBar(listen, onOpen = { showListen = true }, modifier = Modifier.fillMaxWidth())
             if (tabbed) Row(
                 Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically,
@@ -480,6 +490,7 @@ fun HomeScreen(
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Search, "Search everything", Modifier.size(26.dp)) } }
             }
         }
+        if (showListen) ListenSheet(listen, listen.current, fromPara = { 0 }, onDismiss = { showListen = false })
         androidx.compose.material3.SnackbarHost(
             snackbar,
             Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.systemBars)

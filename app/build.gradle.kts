@@ -14,8 +14,8 @@ android {
         applicationId = "app.obsiread"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "0.10.3"
+        versionCode = 24
+        versionName = "0.10.4"
     }
 
     // The release key never lives in the repo. GitHub passes it in through secrets (see
