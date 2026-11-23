@@ -204,6 +204,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     var showActions by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var headerHidden by remember { mutableStateOf(false) }
+    var topRowHeight by remember { mutableStateOf(0) }
     var reloads by remember(videoId) { mutableIntStateOf(0) }
     var showReading by remember { mutableStateOf(false) }
     val activity = remember(ctx) {
@@ -372,6 +373,8 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
             // Fixed room for the status bar, shown or not, so the text never jumps.
             Spacer(Modifier.height(statusTop))
             if (searching) {
+                // The top row floats over the page. The search box goes below it, or the top row hides it.
+                Spacer(Modifier.height(with(androidx.compose.ui.platform.LocalDensity.current) { topRowHeight.toDp() }))
                 FindBar(
                     query = query,
                     count = matchCount,
@@ -620,7 +623,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
             enter = androidx.compose.animation.slideInVertically(spring(1f, 600f)) { -it / 2 } + fadeIn(),
             exit = androidx.compose.animation.slideOutVertically(spring(1f, 600f)) { -it / 2 } + fadeOut(),
         ) {
-            Row(Modifier.fillMaxWidth().background(scheme.background).padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().onSizeChanged { if (it.height > 0) topRowHeight = it.height }.background(scheme.background).padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
                 Text(
                     video.meta.siteName, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
