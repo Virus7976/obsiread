@@ -105,6 +105,25 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         }
         seedFromBundledClipperSettings()
         updates.checkIfDue()
+        // Audio that was still being saved when the app closed goes on saving.
+        if (app.obsi.core.speech.ListenPrefs(this).queued().isNotEmpty()) {
+            app.obsi.core.speech.ReadAloud.get(this).resumeKeeps { listenDoc(it) }
+        }
+    }
+
+    /** An article as read aloud: the same paragraphs the reader shows, title and byline first. */
+    suspend fun listenDoc(id: String): app.obsi.core.speech.ListenDoc? = withContext(Dispatchers.Default) {
+        val a = library.get(id) ?: return@withContext null
+        val body = library.loadBody(id) ?: return@withContext null
+        val d = ArticleDoc.build(body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image).doc
+        app.obsi.core.speech.ListenDoc(id, a.meta.title, a.meta.siteName, d.paras.map { p ->
+            d.text.substring(p.charStart.coerceIn(0, d.text.length), p.charEnd.coerceIn(0, d.text.length))
+        })
+    }
+
+    /** A new save gets its audio too, when asked for in Read aloud settings. */
+    private fun keepAudio(id: String) {
+        appScope.launch { listenDoc(id)?.let { app.obsi.core.speech.ReadAloud.get(this@ObsiReadApp).keepIfWanted(it) } }
     }
 
     /**
@@ -122,6 +141,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
             library.get(clipped.meta.id)?.let { return it.meta.id }
             library.saveBody(clipped.meta.id, clipped.html)
             library.upsert(Article(meta = clipped.meta, addedAt = System.currentTimeMillis()))
+            keepAudio(clipped.meta.id)
             return clipped.meta.id
         } finally {
             clipping.update { it - url }
@@ -138,6 +158,7 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         }
         library.saveBody(clipped.meta.id, clipped.html)
         library.upsert(Article(meta = clipped.meta, addedAt = System.currentTimeMillis()))
+        keepAudio(clipped.meta.id)
         return clipped.meta.id
     }
 
@@ -155,6 +176,10 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
         queue.remove(id)
         playlists.all.value.filter { id in it.videoIds }.forEach { playlists.removeVideo(it.id, id) }
         library.remove(id)
+        // Its saved audio goes too.
+        val listen = app.obsi.core.speech.ReadAloud.peek()
+        if (listen != null) { if (listen.ui.value.docId == id) listen.stop(); listen.removeKept(id) }
+        else appScope.launch { app.obsi.core.speech.KeptAudio.delete(this@ObsiReadApp, id) }
     }
 
     fun setDone(id: String, done: Boolean) {

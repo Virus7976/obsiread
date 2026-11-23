@@ -13,6 +13,7 @@ import app.obsi.core.update.*
 import app.obsi.core.link.*
 import app.obsi.core.share.*
 
+import androidx.compose.material.icons.rounded.Headphones
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
@@ -62,6 +63,7 @@ sealed interface Screen {
     data object Review : Screen
     data object Highlights : Screen
     data object Stats : Screen
+    data object Listen : Screen
     data class Template(val id: String) : Screen
     data class Browser(val url: String, val note: String? = null) : Screen
 }
@@ -191,7 +193,10 @@ fun AppRoot(app: ObsiReadApp, incomingLink: String?, onLinkConsumed: () -> Unit)
                         Screen.Settings -> SettingsScreen(
                             onBack = { pop() },
                             onEditTemplate = { stack.add(Screen.Template(it)) },
+                            appPages = listOf(SettingsEntry("listen", "Read aloud", "Voice, speed, offline audio", androidx.compose.material.icons.Icons.Rounded.Headphones)),
+                            onAppPage = { if (it == "listen") stack.add(Screen.Listen) },
                         )
+                        Screen.Listen -> ListenSettingsScreen(onBack = { pop() })
                         is Screen.Template -> TemplateEditorScreen(screen.id, onBack = { pop() })
                         // When the page is read, the reader takes the browser's place, so Back goes home.
                         is Screen.Browser -> BrowserScreen(screen.url, screen.note, onBack = { pop() }, onRead = { id ->
@@ -218,6 +223,7 @@ private fun depth(s: Screen) = when (s) {
     Screen.Review -> 1
     Screen.Highlights -> 1
     Screen.Stats -> 1
+    Screen.Listen -> 2
     is Screen.Template -> 2
     is Screen.Browser -> 1
 }

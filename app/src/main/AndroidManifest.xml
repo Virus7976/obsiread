@@ -125,5 +125,15 @@
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.INTERNET" />
+        <!-- Read aloud (from obsi-core): the media notification and lock screen controls. Declared per app,
+             because ObsiTube and the others have their own player service. -->
+        <service
+            android:name="app.obsi.core.speech.ReadAloudService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

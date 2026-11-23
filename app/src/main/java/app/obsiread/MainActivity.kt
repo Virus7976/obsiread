@@ -64,6 +64,13 @@ class MainActivity : ComponentActivity() {
 
     /** Another Obsi app asked to open one of our articles, at a highlight. */
     private fun openFrom(intent: Intent?) {
+        if (intent?.getBooleanExtra(app.obsi.core.speech.ReadAloudService.EXTRA_OPEN, false) == true) {
+            intent.removeExtra(app.obsi.core.speech.ReadAloudService.EXTRA_OPEN)
+            app.obsi.core.speech.ReadAloud.peek()?.ui?.value?.docId?.takeIf { it.isNotBlank() }?.let {
+                (application as ObsiReadApp).openItem.value = it to -1.0
+            }
+            return
+        }
         val id = intent?.getStringExtra(app.obsi.core.link.Links.EXTRA_OPEN_ID) ?: return
         val at = intent.getStringExtra(app.obsi.core.link.Links.EXTRA_OPEN_AT)?.toDoubleOrNull() ?: -1.0
         intent.removeExtra(app.obsi.core.link.Links.EXTRA_OPEN_ID)

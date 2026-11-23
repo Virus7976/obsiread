@@ -1,5 +1,7 @@
 package app.obsiread.ui
 
+import app.obsi.core.speech.ListenDoc
+import app.obsi.core.speech.ReadAloud
 import app.obsi.core.ui.TagIdeasRow
 import app.obsi.core.data.HttpWords
 import app.obsi.core.*
@@ -255,12 +257,34 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     val pictures = rememberPictures(built, imageWidth)
 
     var tview by remember { mutableStateOf<TranscriptView?>(null) }
-    // Listen: the phone reads the page out loud and the page follows along.
-    val listen = remember { ReadAloud(ctx) }
-    DisposableEffect(listen) { onDispose { listen.shutdown() } }
-    listen.onPara = { i -> tview?.followPara(i) }
-    LaunchedEffect(listen.failed) {
-        if (listen.failed) android.widget.Toast.makeText(ctx, "This phone has no voice to read with.", android.widget.Toast.LENGTH_LONG).show()
+    // Listen: the page is read out loud, it keeps going with the screen off, and the spoken word is lit.
+    val listen = remember { ReadAloud.get(ctx) }
+    val heard by listen.ui.collectAsState()
+    val listenDoc = remember(doc, videoId) {
+        doc?.let { d ->
+            ListenDoc(videoId, video.meta.title, video.meta.siteName, d.paras.map { p ->
+                d.text.substring(p.charStart.coerceIn(0, d.text.length), p.charEnd.coerceIn(0, d.text.length))
+            })
+        }
+    }
+    var showListen by remember { mutableStateOf(false) }
+    val hearingThis = heard.active && heard.docId == videoId
+    LaunchedEffect(heard.para, heard.word, hearingThis, tview, doc) {
+        val tv = tview ?: return@LaunchedEffect
+        val d = doc ?: return@LaunchedEffect
+        val p = d.paras.getOrNull(heard.para)
+        val r = heard.word
+        if (!hearingThis || p == null || r == null) { tv.setActive(-1); return@LaunchedEffect }
+        val w = d.wordAtChar(p.charStart + r.first)
+        if (w >= 0) {
+            if (listen.prefs.highlightWords) tv.setActive(w) else tv.setActive(-1)
+            if (listen.prefs.followAlong) tv.follow(w)
+        }
+    }
+    fun listenHere() {
+        val ld = listenDoc ?: return
+        if (hearingThis) showListen = true
+        else listen.play(ld, tview?.paraAtTop() ?: 0)
     }
     // Find in this article.
     var searching by remember(videoId) { mutableStateOf(false) }
@@ -468,9 +492,14 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
         }
 
         // Bottom bar: highlights, how much is left, and Clip. It slides away while you read down.
+        // The read aloud player sits on top of it, and stays when it slides away.
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+        if (editingId == null) ListenBar(
+            listen, onOpen = { showListen = true },
+            modifier = if (barsHidden) Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility) else Modifier,
+        )
         AnimatedVisibility(
             visible = !barsHidden && editingId == null,
-            modifier = Modifier.align(Alignment.BottomCenter),
             enter = androidx.compose.animation.slideInVertically(spring(1f, 500f)) { it },
             exit = androidx.compose.animation.slideOutVertically(spring(1f, 500f)) { it },
         ) {
@@ -496,14 +525,11 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                                 Text(timeLeft, maxLines = 1, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
                             } else Text(timeLeft, maxLines = 1, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
                         }
-                        IconButton(onClick = {
-                            if (listen.speaking) listen.stop()
-                            else tview?.let { listen.start(it.paragraphTexts(), it.paraAtTop(), settings.listenRate) }
-                        }) {
+                        IconButton(onClick = { listenHere() }, enabled = listenDoc != null) {
                             Icon(
-                                if (listen.speaking) Icons.Rounded.Stop else Icons.Rounded.Headphones,
-                                if (listen.speaking) "Stop" else "Listen", Modifier.size(22.dp),
-                                tint = if (listen.speaking) scheme.primary else scheme.onSurfaceVariant,
+                                Icons.Rounded.Headphones,
+                                if (hearingThis) "Read aloud controls" else "Listen", Modifier.size(22.dp),
+                                tint = if (hearingThis) scheme.primary else scheme.onSurfaceVariant,
                             )
                         }
                         IconButton(onClick = { showReading = true }) {
@@ -527,6 +553,10 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                 }
             }
         }
+
+        }
+
+        if (showListen) ListenSheet(listen, listenDoc, fromPara = { tview?.paraAtTop() ?: 0 }, onDismiss = { showListen = false })
 
         // The headings in the phone's own pull-up sheet. The one you are in is marked, and a tap jumps there.
         if (showContents) {
@@ -581,6 +611,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                         Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             MenuTile("Find", Icons.Rounded.Search, on = searching) { menu = false; searching = true }
                             MenuTile("Contents", Icons.Rounded.FormatListBulleted, on = false, enabled = heads.isNotEmpty()) { menu = false; showContents = true }
+                            MenuTile("Listen", Icons.Rounded.Headphones, on = hearingThis, enabled = listenDoc != null) { menu = false; if (hearingThis) showListen = true else { listenHere(); showListen = true } }
                             MenuTile("Reading", Icons.Rounded.TextFields, on = showReading) { menu = false; showReading = true }
                         }
                         androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp), color = scheme.outlineVariant.copy(alpha = 0.4f))
