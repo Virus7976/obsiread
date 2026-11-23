@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsiread.web.WebReader
 import app.obsi.core.data.HttpWords
 import app.obsi.core.*
 import app.obsi.core.data.*
@@ -100,7 +101,11 @@ fun AddSheet(initial: String?, onDismiss: () -> Unit, onPlaylist: (String) -> Un
         scope.launch {
             runCatching { app.addFromUrl(link) }
                 .onSuccess { id -> onDismiss(); nav.openVideo(id) }
-                .onFailure { error = HttpWords.error(it, "Could not read that page."); failedLink = link }
+                .onFailure {
+                    // A "check you are a person" page: open the page so you can do the check. It saves by itself after.
+                    if (it is WebReader.Check) { onDismiss(); nav.openBrowser(link, CHECK_NOTE) }
+                    else { error = HttpWords.error(it, "Could not read that page."); failedLink = link }
+                }
             busy = false
         }
     }

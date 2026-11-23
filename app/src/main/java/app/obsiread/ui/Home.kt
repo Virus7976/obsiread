@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsiread.web.WebReader
 import app.obsi.core.ui.rememberOtherHits
 import app.obsi.core.ui.rememberOthersDue
 import app.obsi.core.data.HttpWords
@@ -200,7 +201,7 @@ fun HomeScreen(
         scope.launch {
             runCatching { app.addFromUrl(link) }
                 .onSuccess { id -> app.feeds.hide(link); onOpen(id) }
-                .onFailure { snackbar.showSnackbar(HttpWords.error(it, "Could not read that page.")) }
+                .onFailure { if (it is WebReader.Check) nav.openBrowser(link, CHECK_NOTE) else snackbar.showSnackbar(HttpWords.error(it, "Could not read that page.")) }
         }
     }
     // Every way of marking a video lands here, so each one can be undone the same way.

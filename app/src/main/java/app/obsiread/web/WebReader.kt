@@ -41,7 +41,9 @@ object Defuddle {
         val ctx = view.context
         expandComments(view)
         val loaded = eval(view, "typeof window.Defuddle === 'function'")
-        if (loaded != "true") eval(view, script(ctx) + "\n;'ok'")
+        // The script registers with a page's own module loader when it finds one (PMC has one), and then never
+        // shows up as window.Defuddle. Run it with define, exports and module hidden, so it always does.
+        if (loaded != "true") eval(view, "(function (define, exports, module) {\n" + script(ctx) + "\n}).call(window, undefined, undefined, undefined);\n'ok'")
         // Defuddle works on a copy of the page, so the page you see is left as it is.
         val raw = eval(
             view,
@@ -118,6 +120,24 @@ object Defuddle {
         }
     }
 
+    /**
+     * Is the page a "check you are a person" page (Cloudflare's "Just a moment…", a CAPTCHA, "press and hold")?
+     * Only a short page counts, so an article that mentions bots is not taken for one.
+     */
+    suspend fun isCheck(view: WebView): Boolean = eval(
+        view,
+        """
+        (function () {
+          var b = document.body ? document.body.innerText : '';
+          if (b.length > 3000) return false;
+          var t = (document.title || '') + ' ' + b.slice(0, 800);
+          var box = document.querySelector('#challenge-form, #challenge-running, #cf-challenge-running, .cf-turnstile, ' +
+            'iframe[src*="challenges.cloudflare.com"], iframe[src*="hcaptcha.com"], iframe[src*="recaptcha"], .g-recaptcha, .h-captcha, #px-captcha, #captcha-container');
+          return !!box || /just a moment|attention required|performing security verification|checking (if the site connection is secure|your browser)|verify(ing)? (that )?you are (a )?human|are you a robot|press (and|&) hold|security check|unusual traffic/i.test(t);
+        })()
+        """.trimIndent(),
+    ) == "true"
+
     private suspend fun eval(view: WebView, js: String): String = suspendCancellableCoroutine { c ->
         view.evaluateJavascript(js) { c.resume(it ?: "null") }
     }
@@ -128,6 +148,9 @@ object Defuddle {
  */
 class WebReader(private val context: Context) {
     class Blocked(message: String) : IOException(message)
+
+    /** The site showed a "check you are a person" page. Only you can do that check, in the app's browser. */
+    class Check : IOException("This site wants to check that you are a person.")
 
     @SuppressLint("SetJavaScriptEnabled")
     suspend fun read(url: String, timeoutMs: Long = 30_000): String = withContext(Dispatchers.Main) {
@@ -147,6 +170,13 @@ class WebReader(private val context: Context) {
             watch(view, failed)
             view.loadUrl(url)
             withTimeout(timeoutMs) { settle(view, failed) }
+            if (Defuddle.isCheck(view)) {
+                // Some checks pass by themselves after a few seconds. Give it that long, then ask you.
+                var passed = false
+                repeat(15) { if (!passed) { delay(1000); passed = !Defuddle.isCheck(view) } }
+                if (!passed) throw Check()
+                withTimeout(timeoutMs) { settle(view, failed) }
+            }
             Defuddle.run(view)
         } finally {
             view.stopLoading()

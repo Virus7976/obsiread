@@ -66,6 +66,9 @@ import kotlinx.coroutines.launch
  * you to sign in, or shows a check first. You do that here, like in any browser, then tap
  * Read this page. Sign-ins stay, so next time the page reads by itself.
  */
+/** The note that opens the browser for a "check you are a person" page: the page then saves by itself once it passes. */
+const val CHECK_NOTE = "obsiread:check"
+
 @Composable
 fun BrowserScreen(startUrl: String, note: String?, onBack: () -> Unit, onRead: (String) -> Unit) {
     val app = LocalApp.current
@@ -79,19 +82,41 @@ fun BrowserScreen(startUrl: String, note: String?, onBack: () -> Unit, onRead: (
     var reading by remember { mutableStateOf(false) }
 
     BackHandler(enabled = canBack) { web?.goBack() }
-    LaunchedEffect(note) { if (!note.isNullOrBlank()) snackbar.showSnackbar(note) }
+    LaunchedEffect(note) { if (!note.isNullOrBlank() && note != CHECK_NOTE) snackbar.showSnackbar(note) }
     DisposableEffect(Unit) { onDispose { web?.destroy() } }
+
+    // A "check you are a person" page: a card says what to do, and once the check is passed the page
+    // is saved by itself. The app never does the check for you.
+    var checking by remember { mutableStateOf(false) }
+    var sawCheck by remember { mutableStateOf(note == CHECK_NOTE) }
 
     fun read() {
         val v = web ?: return
         reading = true
         scope.launch {
             runCatching {
+                if (Defuddle.isCheck(v)) throw java.io.IOException("Do the check on the page first.")
                 val found = Defuddle.run(v)
                 app.addFound(found, v.url ?: url)
             }.onSuccess { id -> onRead(id) }
                 .onFailure { snackbar.showSnackbar(HttpWords.error(it, "Could not read this page.")) }
             reading = false
+        }
+    }
+
+    LaunchedEffect(web) {
+        val v = web ?: return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(1200)
+            if (reading) continue
+            val now = runCatching { Defuddle.isCheck(v) }.getOrDefault(false)
+            checking = now
+            if (now) sawCheck = true
+            else if (sawCheck && progress !in 1..99) {
+                // Passed. Let the real page finish drawing, then save it.
+                kotlinx.coroutines.delay(1500)
+                if (!Defuddle.isCheck(v)) { sawCheck = false; read() }
+            }
         }
     }
 
@@ -113,6 +138,18 @@ fun BrowserScreen(startUrl: String, note: String?, onBack: () -> Unit, onRead: (
             }
             if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
             else Spacer(Modifier.height(4.dp))
+            if (checking) Surface(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Text("Check you are a person", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Text(
+                        "This site asks first. Do the check below. The article saves by itself when it opens.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+            }
             AndroidView(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 factory = { c ->

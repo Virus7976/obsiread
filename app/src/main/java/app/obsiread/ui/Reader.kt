@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsiread.web.WebReader
 import app.obsi.core.speech.ListenDoc
 import app.obsi.core.speech.ListenSkip
 import app.obsi.core.speech.ReadAloud
@@ -187,6 +188,7 @@ fun ReaderScreen(videoId: String, onBack: () -> Unit) {
 @Composable
 private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     val app = LocalApp.current
+    val nav = LocalNav.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val settings by app.settings.state.collectAsState()
@@ -197,6 +199,13 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
         return
     }
     val snackbar = remember { SnackbarHostState() }
+    // A page saved before the app knew check pages: it is the site's "Just a moment…", not the article.
+    LaunchedEffect(videoId) {
+        if (Regex("^(just a moment|attention required|security check|are you a robot)", RegexOption.IGNORE_CASE).containsMatchIn(video.meta.title.trim())) {
+            val r = snackbar.showSnackbar("This is the site's check page, not the article.", actionLabel = "Open it", duration = androidx.compose.material3.SnackbarDuration.Long)
+            if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) nav.openBrowser(video.meta.url, CHECK_NOTE)
+        }
+    }
 
     var showSave by remember { mutableStateOf(false) }
     var showHighlights by remember { mutableStateOf(false) }
@@ -430,7 +439,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                         Spacer(Modifier.height(12.dp))
                         Button(onClick = {
                             scope.launch {
-                                runCatching { app.refresh(videoId) }.onSuccess { reloads++ }.onFailure { snackbar.showSnackbar(HttpWords.error(it, "Could not read the page.")) }
+                                runCatching { app.refresh(videoId) }.onSuccess { reloads++ }.onFailure { if (it is WebReader.Check) nav.openBrowser(video.meta.url, CHECK_NOTE) else snackbar.showSnackbar(HttpWords.error(it, "Could not read the page.")) }
                             }
                         }, shapes = ButtonDefaults.shapes()) { Text("Read the page again") }
                     }
@@ -646,7 +655,7 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                                 scope.launch {
                                     runCatching { app.refresh(videoId) }
                                         .onSuccess { reloads++; snackbar.showSnackbar("Read the page again.") }
-                                        .onFailure { snackbar.showSnackbar(HttpWords.error(it, "Could not read the page.")) }
+                                        .onFailure { if (it is WebReader.Check) nav.openBrowser(video.meta.url, CHECK_NOTE) else snackbar.showSnackbar(HttpWords.error(it, "Could not read the page.")) }
                                 }
                             },
                         )

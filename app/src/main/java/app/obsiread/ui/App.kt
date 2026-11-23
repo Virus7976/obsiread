@@ -1,5 +1,6 @@
 package app.obsiread.ui
 
+import app.obsiread.web.WebReader
 import app.obsi.core.ui.WhatsNewAfterUpdate
 import app.obsi.core.ui.ObsiOnLeave
 import app.obsi.core.ui.Onboarding as ObsiOnboarding
@@ -120,7 +121,10 @@ fun AppRoot(app: ObsiReadApp, incomingLink: String?, onLinkConsumed: () -> Unit)
                 scope.launch {
                     runCatching { app.addFromUrl(link) }
                         .onSuccess { id -> nav.openVideo(id) }
-                        .onFailure { e -> nav.openBrowser(link, (e.message ?: "Could not read it by itself.") + " Sign in or wait for the page, then tap Read this page.") }
+                        .onFailure { e ->
+                            if (e is WebReader.Check) nav.openBrowser(link, CHECK_NOTE)
+                            else nav.openBrowser(link, (e.message ?: "Could not read it by itself.") + " Sign in or wait for the page, then tap Read this page.")
+                        }
                 }
             }
             CompositionLocalProvider(LocalNav provides nav) {
