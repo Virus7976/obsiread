@@ -1,6 +1,7 @@
 package app.obsiread.ui
 
 import app.obsi.core.speech.ListenDoc
+import app.obsi.core.speech.ListenSkip
 import app.obsi.core.speech.ReadAloud
 import app.obsi.core.ui.TagIdeasRow
 import app.obsi.core.data.HttpWords
@@ -261,12 +262,8 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
     // Listen: the page is read out loud, it keeps going with the screen off, and the spoken word is lit.
     val listen = remember { ReadAloud.get(ctx) }
     val heard by listen.ui.collectAsState()
-    val listenDoc = remember(doc, videoId) {
-        doc?.let { d ->
-            ListenDoc(videoId, video.meta.title, video.meta.siteName, d.paras.map { p ->
-                d.text.substring(p.charStart.coerceIn(0, d.text.length), p.charEnd.coerceIn(0, d.text.length))
-            })
-        }
+    val listenDoc = remember(built, videoId) {
+        built?.let { b -> ListenSkip.ofArticle(videoId, video.meta.title, video.meta.siteName, b) }
     }
     var showListen by remember { mutableStateOf(false) }
     val hearingThis = heard.active && heard.docId == videoId
@@ -395,6 +392,10 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
                         update = { tv ->
                             tv.onSeek = { }
                             tv.onAway = { away = it }
+                            tv.onListenFrom = { at ->
+                                val pi = d.paras.indexOfLast { it.charStart <= at }
+                                listenDoc?.let { ld -> if (pi >= 0) { away = false; listen.play(ld, pi, at - d.paras[pi].charStart) } }
+                            }
                             tv.onUserScroll = { dy, atTop ->
                                 if (atTop) headerHidden = false
                                 // Only a tap brings the bars back. Scrolling up never pops them in under your finger.

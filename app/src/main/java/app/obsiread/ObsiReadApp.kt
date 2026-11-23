@@ -115,10 +115,8 @@ class ObsiReadApp : Application(), coil3.SingletonImageLoader.Factory, app.obsi.
     suspend fun listenDoc(id: String): app.obsi.core.speech.ListenDoc? = withContext(Dispatchers.Default) {
         val a = library.get(id) ?: return@withContext null
         val body = library.loadBody(id) ?: return@withContext null
-        val d = ArticleDoc.build(body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image).doc
-        app.obsi.core.speech.ListenDoc(id, a.meta.title, a.meta.siteName, d.paras.map { p ->
-            d.text.substring(p.charStart.coerceIn(0, d.text.length), p.charEnd.coerceIn(0, d.text.length))
-        })
+        val b = ArticleDoc.build(body, a.meta.title, app.obsiread.ui.bylineOf(a.meta), a.meta.image)
+        app.obsi.core.speech.ListenSkip.ofArticle(id, a.meta.title, a.meta.siteName, b)
     }
 
     /** A new save gets its audio too, when asked for in Read aloud settings. */
