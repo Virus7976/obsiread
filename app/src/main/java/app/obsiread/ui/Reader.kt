@@ -316,15 +316,8 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
         app.library.edit(videoId) { it.copy(positionSec = atWord.toDouble(), playedAt = System.currentTimeMillis()) }
     }
     // The headings, each with the first word under it, for the side panel.
-    val heads = remember(built) {
-        val d = built?.doc ?: return@remember emptyList<Triple<String, Int, Int>>()
-        built?.styles.orEmpty().filter { it.kind == "heading" }.map { h ->
-            Triple(d.text.substring(h.range.first, h.range.last + 1), h.level, d.wordAtChar(h.range.first))
-        }.filter { it.third >= 0 }
-    }
-    val hereHead = heads.indexOfLast { it.third <= lookWord }
-    val wordsLeft = ((1f - progress) * video.meta.words).toInt()
-    val minutesLeft = (wordsLeft + 229) / 230
+    val heads = remember(built) { headingsOf(built) }
+    val hereHead = heads.indexOfLast { it.word <= lookWord }
 
     fun openLink(url: String) {
         runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -500,55 +493,21 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
             enter = androidx.compose.animation.slideInVertically(spring(1f, 500f)) { it },
             exit = androidx.compose.animation.slideOutVertically(spring(1f, 500f)) { it },
         ) {
-            Surface(modifier = Modifier.fillMaxWidth(), color = scheme.surfaceContainer) {
-                Column(Modifier.navigationBarsPadding()) {
-                    // How far through you are, as a thin line along the top of the bar.
-                    Box(Modifier.fillMaxWidth().height(2.dp).background(scheme.outlineVariant.copy(alpha = 0.35f))) {
-                        Box(Modifier.fillMaxWidth(progress).height(2.dp).background(scheme.primary))
-                    }
-                    Row(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { showHighlights = true }) {
-                            Icon(Icons.Rounded.BorderColor, "Highlights", Modifier.size(20.dp), tint = scheme.tertiary)
-                            if (video.highlights.isNotEmpty()) {
-                                Spacer(Modifier.width(6.dp))
-                                Text("${video.highlights.size}", style = MaterialTheme.typography.labelLarge, color = scheme.onSurface)
-                            }
-                        }
-                        val timeLeft = if (progress > 0.985f) "Finished" else if (progress < 0.01f) "${video.meta.minutes} min read" else "$minutesLeft min left"
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            if (heads.size >= 2) TextButton(onClick = { showContents = true }) {
-                                Icon(Icons.Rounded.FormatListBulleted, "Contents", Modifier.size(18.dp), tint = scheme.onSurfaceVariant)
-                                Spacer(Modifier.width(8.dp))
-                                Text(timeLeft, maxLines = 1, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
-                            } else Text(timeLeft, maxLines = 1, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
-                        }
-                        IconButton(onClick = { listenHere() }, enabled = listenDoc != null) {
-                            Icon(
-                                Icons.Rounded.Headphones,
-                                if (hearingThis) "Read aloud controls" else "Listen", Modifier.size(22.dp),
-                                tint = if (hearingThis) scheme.primary else scheme.onSurfaceVariant,
-                            )
-                        }
-                        IconButton(onClick = { showReading = true }) {
-                            Icon(Icons.Rounded.TextFields, "Reading settings", Modifier.size(22.dp), tint = scheme.onSurfaceVariant)
-                        }
-                        // The loud button means one thing: you marked something that is not in Obsidian yet.
-                        val clipped = video.clippedAt > 0
-                        val unsaved = video.highlights.count { it.createdAt > video.clippedAt }
-                        val label = when { !clipped -> "Clip"; unsaved > 0 -> "Clip $unsaved new"; else -> "Clipped" }
-                        val icon = if (clipped && unsaved == 0) Icons.Rounded.Check else Icons.Rounded.Upload
-                        if (unsaved > 0) Button(onClick = { showSave = true }, shapes = ButtonDefaults.shapes()) {
-                            Icon(icon, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(label, maxLines = 1)
-                        } else FilledTonalButton(onClick = { showSave = true }, shapes = ButtonDefaults.shapes()) {
-                            Icon(icon, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(label, maxLines = 1)
-                        }
-                    }
-                }
-            }
+            ReadingBar(
+                progress = progress,
+                timeLeft = if (progress < 0.01f) "${video.meta.minutes} min read" else timeLeftLabel(progress, video.meta.words),
+                highlights = video.highlights.size,
+                onHighlights = { showHighlights = true },
+                hasContents = heads.size >= 2,
+                onContents = { showContents = true },
+                hearing = hearingThis,
+                canListen = listenDoc != null,
+                onListen = { listenHere() },
+                onReading = { showReading = true },
+                clipped = video.clippedAt > 0,
+                unsaved = video.highlights.count { it.createdAt > video.clippedAt },
+                onClip = { showSave = true },
+            )
         }
 
         val navBottom = WindowInsets.navigationBarsIgnoringVisibility.asPaddingValues().calculateBottomPadding()
@@ -559,35 +518,9 @@ private fun ReaderBody(videoId: String, onBack: () -> Unit) {
         PageListenPlayer(pageListen, Modifier.align(Alignment.BottomCenter).padding(bottom = listenLift), showBar = editingId == null)
 
         // The headings in the phone's own pull-up sheet. The one you are in is marked, and a tap jumps there.
-        if (showContents) {
-            val sheet = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = false)
-            SmoothSheet(onDismissRequest = { showContents = false }, sheetState = sheet) {
-                val list = rememberLazyListState(initialFirstVisibleItemIndex = (hereHead - 2).coerceAtLeast(0))
-                Text("Contents", Modifier.padding(start = 24.dp, bottom = 8.dp), style = MaterialTheme.typography.titleLarge)
-                LazyColumn(state = list, contentPadding = PaddingValues(bottom = 24.dp)) {
-                    itemsIndexed(heads) { i, h ->
-                        val here = i == hereHead
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 12.dp).clip(RoundedCornerShape(16.dp))
-                                .background(if (here) scheme.secondaryContainer else Color.Transparent)
-                                .clickable {
-                                    showContents = false
-                                    tview?.scrollToWord(h.third)
-                                }
-                                .heightIn(min = 48.dp)
-                                .padding(start = (12 + (h.second - 2).coerceAtLeast(0) * 20).dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                h.first, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                style = if (h.second <= 2) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
-                                color = if (here) scheme.onSecondaryContainer else if (h.second <= 2) scheme.onSurface else scheme.onSurfaceVariant,
-                            )
-                            if (here) Text("Here", Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelMedium, color = scheme.onSecondaryContainer)
-                        }
-                    }
-                }
-            }
+        if (showContents) ContentsSheet(heads, hereHead, onDismiss = { showContents = false }) { h ->
+            showContents = false
+            tview?.scrollToWord(h.word)
         }
 
 
